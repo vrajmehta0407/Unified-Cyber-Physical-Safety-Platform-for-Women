@@ -1,0 +1,4 @@
+class StorageKeys {
+  static const accessToken = 'access_token';
+  static const userJson = 'user_json';
+}

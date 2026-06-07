@@ -1,0 +1,57 @@
+# Environment
+.env
+.env.local
+*.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+dist/
+build/
+.vite/
+
+# Flutter
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/build/
+mobile/.pub-cache/
+mobile/.pub/
+mobile/ios/Pods/
+mobile/android/.gradle/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+docker/firebase/firebaseServiceAccount.json
+*.pem
+*.key
+
+# ML models (large files)
+ai-engine/app/models/**/saved_models/*.h5
+ai-engine/app/models/**/saved_models/*.pkl
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite3
