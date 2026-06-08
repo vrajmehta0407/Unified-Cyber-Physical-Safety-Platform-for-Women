@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
 import '../../../../core/di/service_locator.dart';
 import '../widgets/risk_score_widget.dart';
 
@@ -7,7 +6,8 @@ class FakeProfileDetectorPage extends StatefulWidget {
   const FakeProfileDetectorPage({super.key});
 
   @override
-  State<FakeProfileDetectorPage> createState() => _FakeProfileDetectorPageState();
+  State<FakeProfileDetectorPage> createState() =>
+      _FakeProfileDetectorPageState();
 }
 
 class _FakeProfileDetectorPageState extends State<FakeProfileDetectorPage> {
@@ -18,19 +18,39 @@ class _FakeProfileDetectorPageState extends State<FakeProfileDetectorPage> {
 
   Future<void> _analyze() async {
     if (_usernameController.text.trim().isEmpty) return;
-    setState(() { _loading = true; _result = null; });
+    setState(() {
+      _loading = true;
+      _result = null;
+    });
     try {
-      final result = await _ai.analyzeFakeProfile(username: _usernameController.text.trim());
+      final result = await _ai.analyzeFakeProfile(
+          username: _usernameController.text.trim());
       setState(() => _result = result);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: AppColors.danger),
-        );
-      }
+      setState(() =>
+          _result = _localProfileAnalysis(_usernameController.text.trim()));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Map<String, dynamic> _localProfileAnalysis(String username) {
+    var score = 18;
+    final lower = username.toLowerCase();
+    if (RegExp(r'\d{4,}').hasMatch(lower)) score += 18;
+    if (lower.contains('official') ||
+        lower.contains('support') ||
+        lower.contains('helpdesk')) {
+      score += 14;
+    }
+    if (lower.length < 4 || lower.length > 24) score += 10;
+    if (lower.contains('_') && lower.split('_').length > 2) score += 8;
+    score = score.clamp(0, 94);
+    return {
+      'risk_score': score,
+      'message':
+          'Local fallback analysis used: username pattern suggests ${score >= 60 ? 'high impersonation risk' : score >= 35 ? 'moderate review needed' : 'low visible risk'}.',
+    };
   }
 
   @override
@@ -44,21 +64,29 @@ class _FakeProfileDetectorPageState extends State<FakeProfileDetectorPage> {
           children: [
             TextField(
               controller: _usernameController,
-              decoration: const InputDecoration(labelText: 'Instagram / social username'),
+              decoration: const InputDecoration(
+                  labelText: 'Instagram / social username'),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _loading ? null : _analyze,
-              child: _loading ? const CircularProgressIndicator(color: Colors.white) : const Text('Analyze Profile'),
+              child: _loading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text('Analyze Profile'),
             ),
             if (score != null) ...[
               const SizedBox(height: 32),
               RiskScoreWidget(
                 score: score,
-                label: score >= 60 ? 'High Risk' : score >= 35 ? 'Moderate Risk' : 'Low Risk',
+                label: score >= 60
+                    ? 'High Risk'
+                    : score >= 35
+                        ? 'Moderate Risk'
+                        : 'Low Risk',
               ),
               const SizedBox(height: 12),
-              Text(_result?['message']?.toString() ?? '', textAlign: TextAlign.center),
+              Text(_result?['message']?.toString() ?? '',
+                  textAlign: TextAlign.center),
             ],
           ],
         ),

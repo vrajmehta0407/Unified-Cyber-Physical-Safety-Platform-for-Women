@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.cybershield.cybershield"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -15,7 +15,7 @@ android {
 
     defaultConfig {
         applicationId = "com.cybershield.cybershield"
-        minSdk = 21
+        minSdk = flutter.minSdkVersion
         targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -25,6 +25,7 @@ android {
         release {
             signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }

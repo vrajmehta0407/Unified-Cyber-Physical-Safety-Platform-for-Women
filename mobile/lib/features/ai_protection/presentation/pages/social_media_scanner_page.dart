@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../ai_protection/presentation/widgets/risk_score_widget.dart';
 
@@ -18,7 +17,10 @@ class _SocialMediaScannerPageState extends State<SocialMediaScannerPage> {
 
   Future<void> _scan() async {
     if (_usernameController.text.trim().isEmpty) return;
-    setState(() { _loading = true; _result = null; });
+    setState(() {
+      _loading = true;
+      _result = null;
+    });
     try {
       final result = await ServiceLocator.instance.ai.analyzeFakeProfile(
         username: _usernameController.text.trim(),
@@ -26,10 +28,29 @@ class _SocialMediaScannerPageState extends State<SocialMediaScannerPage> {
       );
       setState(() => _result = result);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      setState(() =>
+          _result = _localScan(_usernameController.text.trim(), _platform));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Map<String, dynamic> _localScan(String username, String platform) {
+    var score = platform == 'twitter' ? 24 : 18;
+    final lower = username.toLowerCase();
+    if (lower.contains('http')) score += 8;
+    if (RegExp(r'\d{4,}').hasMatch(lower)) score += 16;
+    if (lower.contains('giveaway') ||
+        lower.contains('crypto') ||
+        lower.contains('support')) {
+      score += 18;
+    }
+    score = score.clamp(0, 92);
+    return {
+      'risk_score': score,
+      'message':
+          'Local fallback scan for $platform: ${score >= 60 ? 'high-risk signals found' : score >= 35 ? 'review profile before engaging' : 'low visible profile risk'}.',
+    };
   }
 
   @override
@@ -43,24 +64,34 @@ class _SocialMediaScannerPageState extends State<SocialMediaScannerPage> {
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: ['instagram', 'facebook', 'twitter'].map((p) => ChoiceChip(
-                label: Text(p),
-                selected: _platform == p,
-                onSelected: (_) => setState(() => _platform = p),
-              )).toList(),
+              children: ['instagram', 'facebook', 'twitter']
+                  .map((p) => ChoiceChip(
+                        label: Text(p),
+                        selected: _platform == p,
+                        onSelected: (_) => setState(() => _platform = p),
+                      ))
+                  .toList(),
             ),
             const SizedBox(height: 16),
-            TextField(controller: _usernameController, decoration: const InputDecoration(labelText: 'Username or profile link')),
+            TextField(
+                controller: _usernameController,
+                decoration: const InputDecoration(
+                    labelText: 'Username or profile link')),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _loading ? null : _scan,
-              child: _loading ? const CircularProgressIndicator(color: Colors.white) : const Text('Scan Profile'),
+              child: _loading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text('Scan Profile'),
             ),
             if (score != null) ...[
               const SizedBox(height: 32),
-              RiskScoreWidget(score: score, label: score >= 60 ? 'High Risk' : 'Moderate Risk'),
+              RiskScoreWidget(
+                  score: score,
+                  label: score >= 60 ? 'High Risk' : 'Moderate Risk'),
               const SizedBox(height: 12),
-              Text(_result?['message']?.toString() ?? '', textAlign: TextAlign.center),
+              Text(_result?['message']?.toString() ?? '',
+                  textAlign: TextAlign.center),
             ],
           ],
         ),

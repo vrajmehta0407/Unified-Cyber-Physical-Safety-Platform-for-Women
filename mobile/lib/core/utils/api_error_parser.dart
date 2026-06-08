@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import '../constants/api_constants.dart';
 
 String parseApiError(DioException e) {
   final data = e.response?.data;

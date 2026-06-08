@@ -4,7 +4,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/services/sms_fallback_service.dart';
 import '../../../../core/services/voice_sos_service.dart';
-import '../../../../shared/widgets/cs_widgets.dart';
+import '../../../../shared/widgets/glass_card.dart';
 
 class SosPage extends StatefulWidget {
   const SosPage({super.key});
@@ -29,10 +29,11 @@ class _SosPageState extends State<SosPage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _pulseCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 2))
-      ..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 0.85, end: 1.0).animate(
-        CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+    _pulseCtrl =
+        AnimationController(vsync: this, duration: const Duration(seconds: 2))
+          ..repeat(reverse: true);
+    _pulseAnim = Tween<double>(begin: 0.85, end: 1.0)
+        .animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
   }
 
   @override
@@ -55,14 +56,18 @@ class _SosPageState extends State<SosPage> with TickerProviderStateMixin {
       setState(() => _activeIncidentId = result['id']?.toString());
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_silentSos ? 'Silent SOS sent! ID: ${result['id']}' : '🚨 SOS Alert triggered! Help is on the way.'),
+          content: Text(_silentSos
+              ? 'Silent SOS sent! ID: ${result['id']}'
+              : '🚨 SOS Alert triggered! Help is on the way.'),
           backgroundColor: AppColors.danger,
         ));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: AppColors.danger),
+          SnackBar(
+              content: Text(e.toString().replaceFirst('Exception: ', '')),
+              backgroundColor: AppColors.danger),
         );
       }
     } finally {
@@ -77,12 +82,15 @@ class _SosPageState extends State<SosPage> with TickerProviderStateMixin {
       setState(() => _activeIncidentId = null);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('SOS cancelled'), backgroundColor: AppColors.success),
+          const SnackBar(
+              content: Text('SOS cancelled'),
+              backgroundColor: AppColors.success),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), backgroundColor: AppColors.danger));
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$e'), backgroundColor: AppColors.danger));
       }
     }
   }
@@ -90,9 +98,15 @@ class _SosPageState extends State<SosPage> with TickerProviderStateMixin {
   Future<void> _sendSmsFallback() async {
     try {
       final position = await _locator.location.getCurrentPosition();
-      await _smsService.sendSosSms(phoneNumbers: ['112'], lat: position.latitude, lng: position.longitude);
+      await _smsService.sendSosSms(
+          phoneNumbers: ['112'],
+          lat: position.latitude,
+          lng: position.longitude);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('$e')));
+      }
     }
   }
 
@@ -123,8 +137,11 @@ class _SosPageState extends State<SosPage> with TickerProviderStateMixin {
                       _buildSosButton(),
                       const SizedBox(height: 8),
                       Text(
-                        _activeIncidentId != null ? 'SOS Active — Tap to Cancel' : 'Tap to Send SOS',
-                        style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 14),
+                        _activeIncidentId != null
+                            ? 'SOS Active — Tap to Cancel'
+                            : 'Tap to Send SOS',
+                        style: GoogleFonts.outfit(
+                            color: AppColors.textSecondary, fontSize: 14),
                       ),
                       if (_activeIncidentId != null) ...[
                         const SizedBox(height: 16),
@@ -149,7 +166,8 @@ class _SosPageState extends State<SosPage> with TickerProviderStateMixin {
   Widget _buildAppBar(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.border))),
+      decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppColors.border))),
       child: Row(
         children: [
           GestureDetector(
@@ -166,23 +184,31 @@ class _SosPageState extends State<SosPage> with TickerProviderStateMixin {
           ),
           const SizedBox(width: 12),
           ShaderMask(
-            shaderCallback: (b) => const LinearGradient(colors: [AppColors.danger, Color(0xFFFF6B6B)]).createShader(b),
+            shaderCallback: (b) => const LinearGradient(
+                colors: [AppColors.danger, Color(0xFFFF6B6B)]).createShader(b),
             child: Text('SOS Emergency',
-                style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                style: GoogleFonts.outfit(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white)),
           ),
           const Spacer(),
           if (_activeIncidentId != null)
             GestureDetector(
               onTap: _cancelSos,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: AppColors.danger.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: AppColors.danger.withOpacity(0.5)),
                 ),
                 child: Text('Cancel SOS',
-                    style: GoogleFonts.outfit(color: AppColors.danger, fontSize: 12, fontWeight: FontWeight.w600)),
+                    style: GoogleFonts.outfit(
+                        color: AppColors.danger,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600)),
               ),
             ),
         ],
@@ -205,7 +231,8 @@ class _SosPageState extends State<SosPage> with TickerProviderStateMixin {
           Expanded(
             child: Text(
               'Your SOS will be sent to Police and your Emergency Contacts',
-              style: GoogleFonts.outfit(color: AppColors.danger.withOpacity(0.9), fontSize: 13),
+              style: GoogleFonts.outfit(
+                  color: AppColors.danger.withOpacity(0.9), fontSize: 13),
             ),
           ),
         ],
@@ -217,7 +244,9 @@ class _SosPageState extends State<SosPage> with TickerProviderStateMixin {
     return AnimatedBuilder(
       animation: _pulseAnim,
       builder: (_, __) => GestureDetector(
-        onTap: _loading ? null : (_activeIncidentId != null ? _cancelSos : _triggerSos),
+        onTap: _loading
+            ? null
+            : (_activeIncidentId != null ? _cancelSos : _triggerSos),
         child: Stack(
           alignment: Alignment.center,
           children: [
@@ -227,7 +256,8 @@ class _SosPageState extends State<SosPage> with TickerProviderStateMixin {
               height: 220 * _pulseAnim.value,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.danger.withOpacity(0.08 * (2 - _pulseAnim.value)),
+                color:
+                    AppColors.danger.withOpacity(0.08 * (2 - _pulseAnim.value)),
               ),
             ),
             // Middle ring
@@ -236,7 +266,8 @@ class _SosPageState extends State<SosPage> with TickerProviderStateMixin {
               height: 195 * _pulseAnim.value,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.danger.withOpacity(0.15 * (2 - _pulseAnim.value)),
+                color:
+                    AppColors.danger.withOpacity(0.15 * (2 - _pulseAnim.value)),
               ),
             ),
             // Main button
@@ -248,25 +279,37 @@ class _SosPageState extends State<SosPage> with TickerProviderStateMixin {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: _loading
-                      ? [AppColors.danger.withOpacity(0.6), AppColors.dangerDark.withOpacity(0.6)]
+                      ? [
+                          AppColors.danger.withOpacity(0.6),
+                          AppColors.dangerDark.withOpacity(0.6)
+                        ]
                       : [AppColors.danger, AppColors.dangerDark],
                 ),
                 boxShadow: [
-                  BoxShadow(color: AppColors.danger.withOpacity(0.6), blurRadius: 40, spreadRadius: 5),
+                  BoxShadow(
+                      color: AppColors.danger.withOpacity(0.6),
+                      blurRadius: 40,
+                      spreadRadius: 5),
                 ],
               ),
               child: Center(
                 child: _loading
-                    ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 3)
+                    ? const CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 3)
                     : Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text('SOS',
                               style: GoogleFonts.outfit(
-                                  color: Colors.white, fontSize: 40, fontWeight: FontWeight.bold)),
+                                  color: Colors.white,
+                                  fontSize: 40,
+                                  fontWeight: FontWeight.bold)),
                           const SizedBox(height: 4),
                           Text(_activeIncidentId != null ? 'ACTIVE' : 'TAP',
-                              style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12, letterSpacing: 2)),
+                              style: GoogleFonts.outfit(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                  letterSpacing: 2)),
                         ],
                       ),
               ),
@@ -293,15 +336,20 @@ class _SosPageState extends State<SosPage> with TickerProviderStateMixin {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('SOS Active', style: GoogleFonts.outfit(color: AppColors.danger, fontWeight: FontWeight.bold)),
+                Text('SOS Active',
+                    style: GoogleFonts.outfit(
+                        color: AppColors.danger, fontWeight: FontWeight.bold)),
                 Text('Incident ID: $_activeIncidentId',
-                    style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12)),
+                    style: GoogleFonts.outfit(
+                        color: AppColors.textSecondary, fontSize: 12)),
               ],
             ),
           ),
           Container(
-            width: 10, height: 10,
-            decoration: const BoxDecoration(color: AppColors.danger, shape: BoxShape.circle),
+            width: 10,
+            height: 10,
+            decoration: const BoxDecoration(
+                color: AppColors.danger, shape: BoxShape.circle),
           ),
         ],
       ),
@@ -320,7 +368,10 @@ class _SosPageState extends State<SosPage> with TickerProviderStateMixin {
             value: _silentSos,
             onChanged: _loading ? null : (v) => setState(() => _silentSos = v),
           ),
-          Container(height: 1, color: AppColors.border, margin: const EdgeInsets.symmetric(vertical: 12)),
+          Container(
+              height: 1,
+              color: AppColors.border,
+              margin: const EdgeInsets.symmetric(vertical: 12)),
           _ToggleRow(
             icon: Icons.mic,
             title: 'Voice SOS',
@@ -368,12 +419,16 @@ class _SosPageState extends State<SosPage> with TickerProviderStateMixin {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Send SOS via SMS', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
-                  Text('Works without internet', style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12)),
+                  Text('Send SOS via SMS',
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                  Text('Works without internet',
+                      style: GoogleFonts.outfit(
+                          color: AppColors.textSecondary, fontSize: 12)),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textHint),
+            const Icon(Icons.arrow_forward_ios,
+                size: 14, color: AppColors.textHint),
           ],
         ),
       ),
@@ -413,8 +468,12 @@ class _ToggleRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 14)),
-              Text(subtitle, style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12)),
+              Text(title,
+                  style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.w600, fontSize: 14)),
+              Text(subtitle,
+                  style: GoogleFonts.outfit(
+                      color: AppColors.textSecondary, fontSize: 12)),
             ],
           ),
         ),
