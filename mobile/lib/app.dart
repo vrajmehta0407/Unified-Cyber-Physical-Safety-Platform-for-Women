@@ -22,9 +22,11 @@ import 'features/ai_protection/presentation/pages/phishing_checker_page.dart';
 import 'features/ai_protection/presentation/pages/fake_profile_detector_page.dart';
 import 'features/ai_protection/presentation/pages/deepfake_checker_page.dart';
 import 'features/ai_protection/presentation/pages/social_media_scanner_page.dart';
+import 'features/ai_protection/presentation/pages/ai_tools_home_page.dart';
 import 'features/guardian/presentation/pages/guardian_management_page.dart';
 import 'features/guardian/presentation/pages/community_safety_page.dart';
 import 'features/guardian/presentation/pages/connected_devices_page.dart';
+import 'features/guardian/presentation/pages/missing_person_page.dart';
 import 'features/awareness/presentation/pages/awareness_home_page.dart';
 import 'shared/pages/home_page.dart';
 import 'shared/pages/settings_page.dart';
@@ -75,9 +77,11 @@ final _router = GoRouter(
     GoRoute(path: '/deepfake', builder: (_, __) => const DeepfakeCheckerPage()),
     GoRoute(path: '/fake-profile', builder: (_, __) => const FakeProfileDetectorPage()),
     GoRoute(path: '/social-scanner', builder: (_, __) => const SocialMediaScannerPage()),
+    GoRoute(path: '/ai-tools', builder: (_, __) => const AiToolsHomePage()),
     GoRoute(path: '/guardians', builder: (_, __) => const GuardianManagementPage()),
     GoRoute(path: '/community', builder: (_, __) => const CommunitySafetyPage()),
     GoRoute(path: '/devices', builder: (_, __) => const ConnectedDevicesPage()),
+    GoRoute(path: '/missing-person', builder: (_, __) => const MissingPersonPage()),
     GoRoute(path: '/awareness', builder: (_, __) => const AwarenessHomePage()),
     GoRoute(path: '/settings', builder: (_, __) => const SettingsPage()),
   ],

@@ -6,15 +6,20 @@ print("=" * 50)
 print("BACKEND TESTS (http://localhost:8000)")
 print("=" * 50)
 
+import random
+
+# Generate a random 10-digit mobile number starting with 9
+test_mobile = f"9{random.randint(100000000, 999999999)}"
+
 # 1. Register
 r = httpx.post("http://localhost:8000/api/v1/auth/register", json={
-    "name": "Test User", "mobile": "9876543210", "password": "Test@1234", "role": "user"
+    "name": "Test User", "mobile": test_mobile, "password": "Test@1234", "role": "user"
 })
 print(f"  Register:       {r.status_code}  {r.text[:120]}")
 
 # 2. Login
 r = httpx.post("http://localhost:8000/api/v1/auth/login", json={
-    "mobile": "9876543210", "password": "Test@1234"
+    "mobile": test_mobile, "password": "Test@1234"
 })
 print(f"  Login:          {r.status_code}  {r.text[:120]}")
 
