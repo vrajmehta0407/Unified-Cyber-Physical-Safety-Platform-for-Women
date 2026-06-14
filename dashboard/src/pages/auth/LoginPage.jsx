@@ -58,9 +58,10 @@ export default function LoginPage() {
         <button type="submit" className="btn-primary" style={{ width: '100%' }} disabled={loading}>
           {loading ? 'Signing in...' : 'Login'}
         </button>
-        <p style={{ marginTop: '1rem', fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-          Demo: 9999999999 / police123
-        </p>
+        <div style={{ marginTop: '1rem', fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
+          <div>👮 Police: 9999999999 / police123</div>
+          <div style={{ marginTop: '4px' }}>⚙️ Admin: 9000000001 / admin123</div>
+        </div>
       </form>
     </div>
   );

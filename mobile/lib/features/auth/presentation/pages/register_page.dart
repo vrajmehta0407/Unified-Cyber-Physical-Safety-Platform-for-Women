@@ -21,6 +21,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _mobileController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -48,7 +49,7 @@ class _RegisterPageState extends State<RegisterPage> {
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthOtpSent) {
-            context.go('/otp', extra: state.mobile);
+            context.go('/otp', extra: {'mobile': state.mobile, 'devOtp': state.devOtp});
           } else if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(state.message), backgroundColor: AppColors.danger),
@@ -69,7 +70,21 @@ class _RegisterPageState extends State<RegisterPage> {
                   const SizedBox(height: 16),
                   AuthTextField(controller: _emailController, label: 'Email (optional)', keyboardType: TextInputType.emailAddress),
                   const SizedBox(height: 16),
-                  AuthTextField(controller: _passwordController, label: 'Password', obscureText: true, validator: Validators.password),
+                  AuthTextField(
+                    controller: _passwordController,
+                    label: 'Password',
+                    obscureText: _obscurePassword,
+                    validator: Validators.password,
+                    prefixIcon: Icons.lock_outline,
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        color: AppColors.textSecondary,
+                        size: 20,
+                      ),
+                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    ),
+                  ),
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,

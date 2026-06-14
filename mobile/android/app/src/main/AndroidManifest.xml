@@ -36,7 +36,11 @@
             </intent-filter>
         </activity>
         <meta-data android:name="flutterEmbedding" android:value="2"/>
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="2c80c85112844ac39395276829d3937d"/>
     </application>
+
 
     <queries>
         <intent>
@@ -46,6 +50,10 @@
         <intent>
             <action android:name="android.intent.action.SENDTO"/>
             <data android:scheme="smsto"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SENDTO"/>
+            <data android:scheme="sms"/>
         </intent>
         <intent>
             <action android:name="android.intent.action.VIEW"/>

@@ -24,6 +24,8 @@ class HomePage extends StatelessWidget {
             sliver: SliverList(
               delegate: SliverChildListDelegate([
                 const SizedBox(height: 20),
+                _SafetyScoreGauge(),
+                const SizedBox(height: 20),
                 _SosBanner(),
                 const SizedBox(height: 28),
                 const SectionHeader(title: 'Quick Actions'),
@@ -263,16 +265,40 @@ class _QuickActionsGrid extends StatelessWidget {
     final actions = [
       _ActionDef(
           Icons.report_problem_outlined,
-          'Report Cyber Crime',
+          'Report Cybercrime',
           'Report Now',
-          '/report',
+          '/report-hub',
           [const Color(0xFF7C3AED), const Color(0xFF5B21B6)]),
-      _ActionDef(Icons.upload_file_outlined, 'Upload Evidence', 'Upload Now',
-          '/evidence', [const Color(0xFFEC4899), const Color(0xFFBE185D)]),
-      _ActionDef(Icons.location_on_outlined, 'Live Tracking', 'View Location',
-          '/tracking', [const Color(0xFF3B82F6), const Color(0xFF1D4ED8)]),
-      _ActionDef(Icons.lightbulb_outlined, 'Safety Tips', 'Learn More',
-          '/awareness', [const Color(0xFFEAB308), const Color(0xFFCA8A04)]),
+      _ActionDef(
+          Icons.lock_outline,
+          'Evidence Vault',
+          'Secure Files',
+          '/evidence',
+          [const Color(0xFFEC4899), const Color(0xFFBE185D)]),
+      _ActionDef(
+          Icons.shield_outlined,
+          'AI Threat Scan',
+          'Scan Now',
+          '/ai-tools',
+          [const Color(0xFF8B5CF6), const Color(0xFF6D28D9)]),
+      _ActionDef(
+          Icons.map_outlined,
+          'Safe Route',
+          'Plan Route',
+          '/safety-map',
+          [const Color(0xFF3B82F6), const Color(0xFF1D4ED8)]),
+      _ActionDef(
+          Icons.person_search_outlined,
+          'Fake Profile Check',
+          'Verify Profile',
+          '/fake-profile',
+          [const Color(0xFF06B6D4), const Color(0xFF0891B2)]),
+      _ActionDef(
+          Icons.lightbulb_outlined,
+          'Safety Tips',
+          'Learn More',
+          '/awareness',
+          [const Color(0xFFEAB308), const Color(0xFFCA8A04)]),
     ];
 
     return GridView.count(
@@ -281,7 +307,7 @@ class _QuickActionsGrid extends StatelessWidget {
       crossAxisCount: 2,
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
-      childAspectRatio: 1.3,
+      childAspectRatio: 1.35,
       children: actions
           .map((a) => ActionIconCard(
                 icon: a.icon,
@@ -494,3 +520,181 @@ class _FeatureInfo {
   const _FeatureInfo(
       this.icon, this.title, this.description, this.route, this.color);
 }
+
+class _SafetyScoreGauge extends StatefulWidget {
+  @override
+  State<_SafetyScoreGauge> createState() => _SafetyScoreGaugeState();
+}
+
+class _SafetyScoreGaugeState extends State<_SafetyScoreGauge> with SingleTickerProviderStateMixin {
+  late final AnimationController _scoreCtrl;
+  late final Animation<double> _scoreAnim;
+  
+  final bool guardiansSet = true;
+  final bool locationShared = true;
+  final bool accountVerified = true;
+  final bool aiScanDone = false;
+  final bool reportsFiled = true;
+  
+  int get score {
+    int s = 0;
+    if (guardiansSet) s += 20;
+    if (locationShared) s += 20;
+    if (accountVerified) s += 25;
+    if (aiScanDone) s += 20;
+    if (reportsFiled) s += 15;
+    return s;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _scoreCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
+    _scoreAnim = Tween<double>(begin: 0, end: score.toDouble()).animate(
+      CurvedAnimation(parent: _scoreCtrl, curve: Curves.fastOutSlowIn),
+    );
+    _scoreCtrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _scoreCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 76,
+            height: 76,
+            child: AnimatedBuilder(
+              animation: _scoreAnim,
+              builder: (context, child) {
+                return Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
+                      width: 76,
+                      height: 76,
+                      child: CircularProgressIndicator(
+                        value: 1.0,
+                        backgroundColor: Colors.transparent,
+                        color: AppColors.border,
+                        strokeWidth: 6,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 76,
+                      height: 76,
+                      child: CircularProgressIndicator(
+                        value: _scoreAnim.value / 100.0,
+                        backgroundColor: Colors.transparent,
+                        color: _scoreAnim.value > 75
+                            ? AppColors.success
+                            : (_scoreAnim.value > 45 ? AppColors.warning : AppColors.danger),
+                        strokeWidth: 6,
+                        strokeCap: StrokeCap.round,
+                      ),
+                    ),
+                    Text(
+                      '${_scoreAnim.value.toInt()}',
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Safety Score',
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Complete all actions to maximize score.',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _FactorChip(label: 'Guardians ✓', active: guardiansSet),
+                      const SizedBox(width: 6),
+                      _FactorChip(label: 'GPS Shared ✓', active: locationShared),
+                      const SizedBox(width: 6),
+                      _FactorChip(label: 'Verified ✓', active: accountVerified),
+                      const SizedBox(width: 6),
+                      _FactorChip(label: 'Scan Pending ⚠️', active: aiScanDone, isWarn: true),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FactorChip extends StatelessWidget {
+  final String label;
+  final bool active;
+  final bool isWarn;
+  const _FactorChip({required this.label, required this.active, this.isWarn = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: active
+            ? AppColors.success.withOpacity(0.12)
+            : (isWarn ? AppColors.warning.withOpacity(0.12) : AppColors.border),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: active
+              ? AppColors.success.withOpacity(0.35)
+              : (isWarn ? AppColors.warning.withOpacity(0.35) : AppColors.border),
+        ),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.inter(
+          fontSize: 9,
+          fontWeight: FontWeight.w600,
+          color: active
+              ? AppColors.success
+              : (isWarn ? AppColors.warning : AppColors.textSecondary),
+        ),
+      ),
+    );
+  }
+}
+

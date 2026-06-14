@@ -11,7 +11,8 @@ import '../widgets/otp_input_widget.dart';
 
 class OtpVerificationPage extends StatefulWidget {
   final String? mobile;
-  const OtpVerificationPage({super.key, this.mobile});
+  final String? devOtp;
+  const OtpVerificationPage({super.key, this.mobile, this.devOtp});
 
   @override
   State<OtpVerificationPage> createState() => _OtpVerificationPageState();
@@ -20,6 +21,7 @@ class OtpVerificationPage extends StatefulWidget {
 class _OtpVerificationPageState extends State<OtpVerificationPage> {
   final _mobileController = TextEditingController();
   final _otpController = TextEditingController();
+  String? _displayedDevOtp;
 
   @override
   void initState() {
@@ -27,6 +29,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
     if (widget.mobile != null) {
       _mobileController.text = widget.mobile!;
     }
+    _displayedDevOtp = widget.devOtp;
   }
 
   @override
@@ -68,8 +71,14 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
           if (state is AuthAuthenticated) {
             context.go('/home');
           } else if (state is AuthOtpSent) {
+            setState(() => _displayedDevOtp = state.devOtp);
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('OTP sent! Check backend logs in dev mode.')),
+              SnackBar(
+                content: Text(state.devOtp != null
+                    ? 'OTP sent via SMS to your phone! Code: ${state.devOtp}'
+                    : 'OTP sent via SMS!'),
+                backgroundColor: Colors.green.shade700,
+              ),
             );
           } else if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -79,11 +88,75 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
         },
         builder: (context, state) {
           final loading = state is AuthLoading;
-          return Padding(
+          return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('Enter the 6-digit OTP sent to your mobile', textAlign: TextAlign.center),
+                const Text(
+                  'OTP has been sent via SMS to your mobile number.\nPlease check your messages.',
+                  textAlign: TextAlign.center,
+                ),
+                // ── SMS OTP Banner ──────────────────────────────────
+                if (_displayedDevOtp != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade800.withOpacity(0.15),
+                      border: Border.all(color: Colors.green.shade600),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.sms_outlined, color: Colors.green),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'SMS Verification Code',
+                                style: TextStyle(
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _displayedDevOtp!,
+                                style: const TextStyle(
+                                  color: Colors.green,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 6,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                'Also sent to your phone via SMS',
+                                style: TextStyle(
+                                  color: Colors.green,
+                                  fontSize: 10,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.copy, color: Colors.green, size: 20),
+                          tooltip: 'Copy OTP',
+                          onPressed: () {
+                            _otpController.text = _displayedDevOtp!;
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                // ────────────────────────────────────────────────────
                 const SizedBox(height: 24),
                 AuthTextField(
                   controller: _mobileController,
@@ -101,7 +174,11 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
                     child: loading ? const CircularProgressIndicator(color: Colors.white) : const Text('Verify & Login'),
                   ),
                 ),
-                TextButton(onPressed: loading ? null : _sendOtp, child: const Text('Resend OTP')),
+                TextButton.icon(
+                  onPressed: loading ? null : _sendOtp,
+                  icon: const Icon(Icons.sms_outlined, size: 18),
+                  label: const Text('Resend OTP via SMS'),
+                ),
               ],
             ),
           );

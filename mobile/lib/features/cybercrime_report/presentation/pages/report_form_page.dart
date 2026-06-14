@@ -5,14 +5,18 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/di/service_locator.dart';
 
 const _categories = [
-  _CrimeCat(Icons.location_on_outlined,    'Cyber Stalking',       'Persistent online harassment'),
+  _CrimeCat(Icons.search,                  'Cyberstalking',         'Track & monitor online'),
   _CrimeCat(Icons.person_off_outlined,     'Online Harassment',    'Abusive messages or threats'),
   _CrimeCat(Icons.face_outlined,           'Fake Profile',         'Impersonation on social media'),
-  _CrimeCat(Icons.account_balance_outlined,'Financial Fraud',      'Online financial deception'),
   _CrimeCat(Icons.badge_outlined,          'Identity Theft',       'Unauthorized use of identity'),
-  _CrimeCat(Icons.lock_outline,            'Blackmail',            'Threats using personal info'),
+  _CrimeCat(Icons.account_balance_outlined,'Financial Fraud',      'Online financial deception'),
+  _CrimeCat(Icons.lock_outline,            'Blackmail/Sextortion', 'Threats using personal info'),
   _CrimeCat(Icons.face_retouching_off,     'Deepfake Abuse',       'Manipulated images or videos'),
   _CrimeCat(Icons.phishing_outlined,       'Phishing Attack',      'Fraudulent links or messages'),
+  _CrimeCat(Icons.phone_android_outlined,  'SIM Swap Fraud',       'Mobile hijacking'),
+  _CrimeCat(Icons.image_outlined,          'Morphed Images',       'Photo manipulation'),
+  _CrimeCat(Icons.phone_callback_outlined, 'Vishing/Call Fraud',   'Fake voice calls'),
+  _CrimeCat(Icons.public_outlined,         'Social Media Hacking', 'Account takeover'),
 ];
 
 class _CrimeCat {
@@ -23,7 +27,8 @@ class _CrimeCat {
 }
 
 class ReportFormPage extends StatefulWidget {
-  const ReportFormPage({super.key});
+  final String? initialCategory;
+  const ReportFormPage({super.key, this.initialCategory});
 
   @override
   State<ReportFormPage> createState() => _ReportFormPageState();
@@ -35,6 +40,21 @@ class _ReportFormPageState extends State<ReportFormPage> {
   bool _loading = false;
   final _descCtrl = TextEditingController();
   final _reports = ServiceLocator.instance.reports;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialCategory != null) {
+      // Find matching category label by code
+      final matched = _categories.firstWhere(
+        (c) => c.label.toLowerCase().replaceAll(' ', '_').replaceAll('/', '_') == widget.initialCategory ||
+               c.label.toLowerCase() == widget.initialCategory,
+        orElse: () => _categories.first,
+      );
+      _selectedCategory = matched.label;
+      _step = 2; // Auto-fill and proceed to description
+    }
+  }
 
   @override
   void dispose() {

@@ -28,6 +28,10 @@ import 'features/guardian/presentation/pages/community_safety_page.dart';
 import 'features/guardian/presentation/pages/connected_devices_page.dart';
 import 'features/guardian/presentation/pages/missing_person_page.dart';
 import 'features/awareness/presentation/pages/awareness_home_page.dart';
+import 'features/auth/presentation/pages/language_selection_page.dart';
+import 'features/cybercrime_report/presentation/pages/complaint_tracker_page.dart';
+import 'features/cybercrime_report/presentation/pages/report_hub_page.dart';
+import 'features/tracking/presentation/pages/safety_map_page.dart';
 import 'shared/pages/home_page.dart';
 import 'shared/pages/settings_page.dart';
 
@@ -61,16 +65,30 @@ final _router = GoRouter(
     return null;
   },
   routes: [
+    GoRoute(path: '/language', builder: (_, __) => const LanguageSelectionPage()),
     GoRoute(path: '/splash', builder: (_, __) => const SplashPage()),
     GoRoute(path: '/login', builder: (_, __) => const LoginPage()),
     GoRoute(path: '/register', builder: (_, __) => const RegisterPage()),
-    GoRoute(path: '/otp', builder: (context, state) => OtpVerificationPage(mobile: state.extra as String?)),
+    GoRoute(path: '/otp', builder: (context, state) {
+      final extra = state.extra as Map<String, dynamic>?;
+      return OtpVerificationPage(
+        mobile: extra?['mobile'] as String?,
+        devOtp: extra?['devOtp'] as String?,
+      );
+    }),
     GoRoute(path: '/home', builder: (_, __) => const HomePage()),
     GoRoute(path: '/sos', builder: (_, __) => const SosPage()),
     GoRoute(path: '/offline-sos', builder: (_, __) => const OfflineSosPage()),
     GoRoute(path: '/tracking', builder: (_, __) => const LiveTrackingPage()),
     GoRoute(path: '/unsafe-zones', builder: (_, __) => const UnsafeZonePage()),
-    GoRoute(path: '/report', builder: (_, __) => const ReportFormPage()),
+    GoRoute(
+      path: '/report',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        final category = extra?['category'] as String?;
+        return ReportFormPage(initialCategory: category);
+      },
+    ),
     GoRoute(path: '/evidence', builder: (_, __) => const UploadEvidencePage()),
     GoRoute(path: '/blockchain', builder: (_, __) => const BlockchainVerificationPage()),
     GoRoute(path: '/phishing', builder: (_, __) => const PhishingCheckerPage()),
@@ -84,5 +102,8 @@ final _router = GoRouter(
     GoRoute(path: '/missing-person', builder: (_, __) => const MissingPersonPage()),
     GoRoute(path: '/awareness', builder: (_, __) => const AwarenessHomePage()),
     GoRoute(path: '/settings', builder: (_, __) => const SettingsPage()),
+    GoRoute(path: '/report-hub', builder: (_, __) => const ReportHubPage()),
+    GoRoute(path: '/my-complaints', builder: (_, __) => const ComplaintTrackerPage()),
+    GoRoute(path: '/safety-map', builder: (_, __) => const SafetyMapPage()),
   ],
 );

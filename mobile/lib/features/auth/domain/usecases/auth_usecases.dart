@@ -11,7 +11,7 @@ class LoginUseCase {
 class RegisterUseCase {
   final AuthRepository _repository;
   RegisterUseCase(this._repository);
-  Future<String> call({
+  Future<(String, String?)> call({
     required String name,
     required String mobile,
     String? email,
@@ -42,5 +42,5 @@ class LogoutUseCase {
 class SendOtpUseCase {
   final AuthRepository _repository;
   SendOtpUseCase(this._repository);
-  Future<void> call(String mobile) => _repository.sendOtp(mobile);
+  Future<String?> call(String mobile) => _repository.sendOtp(mobile);
 }

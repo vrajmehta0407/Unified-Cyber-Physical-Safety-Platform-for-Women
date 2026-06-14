@@ -9,6 +9,7 @@ from app.api.v1.endpoints import (
     guardians,
     incidents,
     integrations,
+    map,
     notifications,
     reports,
     sos,
@@ -30,3 +31,5 @@ api_router.include_router(tracking.router)
 api_router.include_router(notifications.router)
 api_router.include_router(analytics.router)
 api_router.include_router(awareness.router)
+api_router.include_router(map.router)
+

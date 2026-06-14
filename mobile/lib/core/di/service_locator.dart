@@ -48,8 +48,8 @@ class ServiceLocator {
     final token = await storage.getToken();
     if (token != null) api.setToken(token);
 
-    final remote = AuthRemoteDataSource(api);
-    authRepository = AuthRepositoryImpl(remote, storage, api);
+    final remote = AuthRemoteDataSource();
+    authRepository = AuthRepositoryImpl(remote);
     _initialized = true;
   }
 

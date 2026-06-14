@@ -28,9 +28,10 @@ class AuthUnauthenticated extends AuthState {
 
 class AuthOtpSent extends AuthState {
   final String mobile;
-  const AuthOtpSent(this.mobile);
+  final String? devOtp;
+  const AuthOtpSent(this.mobile, {this.devOtp});
   @override
-  List<Object?> get props => [mobile];
+  List<Object?> get props => [mobile, devOtp];
 }
 
 class AuthError extends AuthState {

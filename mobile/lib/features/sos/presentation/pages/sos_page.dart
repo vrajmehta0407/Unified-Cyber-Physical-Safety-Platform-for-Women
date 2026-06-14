@@ -98,8 +98,18 @@ class _SosPageState extends State<SosPage> with TickerProviderStateMixin {
   Future<void> _sendSmsFallback() async {
     try {
       final position = await _locator.location.getCurrentPosition();
+      List<String> numbers = [];
+      try {
+        final gs = await _locator.guardians.listGuardians();
+        numbers = gs.map((g) => g['phone']?.toString() ?? '').where((p) => p.isNotEmpty).toList();
+      } catch (_) {}
+      
+      if (numbers.isEmpty) {
+        numbers = ['112', '1091'];
+      }
+      
       await _smsService.sendSosSms(
-          phoneNumbers: ['112'],
+          phoneNumbers: numbers,
           lat: position.latitude,
           lng: position.longitude);
     } catch (e) {

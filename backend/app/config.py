@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     ERSS_WEBHOOK_URL: str = "http://localhost:9000/erss/alert"
     EVIDENCE_ENCRYPTION_KEY: str = "32-byte-aes-key-change-in-prod!!"
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
+    GOOGLE_MAPS_API_KEY: str = "2c80c85112844ac39395276829d3937d"
+    FCM_SERVER_KEY: str = ""
+    FIREBASE_PROJECT_ID: str = "cybershield-ahmedabad"
+    EVIDENCE_STORAGE: str = "local"  # "local" | "s3" | "cloudinary"
+
 
     @property
     def cors_origins_list(self) -> list[str]:
@@ -23,8 +28,14 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+# Convenient module-level alias
+settings = get_settings()
+

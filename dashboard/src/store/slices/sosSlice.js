@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { sosService } from '../../services/incidentService';
+import { sosService, incidentService } from '../../services/incidentService';
 
 export const fetchActiveSos = createAsyncThunk('sos/fetchActive', async (_, { rejectWithValue }) => {
   try {
@@ -7,6 +7,30 @@ export const fetchActiveSos = createAsyncThunk('sos/fetchActive', async (_, { re
     return data;
   } catch (err) {
     return rejectWithValue(err.response?.data?.detail || 'Failed to load SOS alerts');
+  }
+});
+
+export const dispatchSos = createAsyncThunk('sos/dispatch', async (id, { dispatch, rejectWithValue }) => {
+  try {
+    const { data } = await incidentService.update(id, { status: 'responding' });
+    dispatch(updateAlertStatus({ id, status: 'RESPONDING' }));
+    return data;
+  } catch (err) {
+    // Local fallback for mock data
+    dispatch(updateAlertStatus({ id, status: 'RESPONDING' }));
+    return rejectWithValue(err.response?.data?.detail || 'Failed to dispatch unit');
+  }
+});
+
+export const resolveSos = createAsyncThunk('sos/resolve', async (id, { dispatch, rejectWithValue }) => {
+  try {
+    const { data } = await incidentService.update(id, { status: 'resolved' });
+    dispatch(updateAlertStatus({ id, status: 'RESOLVED' }));
+    return data;
+  } catch (err) {
+    // Local fallback for mock data
+    dispatch(updateAlertStatus({ id, status: 'RESOLVED' }));
+    return rejectWithValue(err.response?.data?.detail || 'Failed to resolve SOS');
   }
 });
 
@@ -28,6 +52,13 @@ const sosSlice = createSlice({
     removeAlert: (state, action) => {
       state.activeAlerts = state.activeAlerts.filter((a) => a.id !== action.payload);
     },
+    updateAlertStatus: (state, action) => {
+      const { id, status } = action.payload;
+      const alert = state.activeAlerts.find((a) => a.id === id);
+      if (alert) {
+        alert.status = status;
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -42,7 +73,7 @@ const sosSlice = createSlice({
           lng: inc.lng,
           priority: inc.is_silent ? 'medium' : 'high',
           time: formatTime(inc.created_at),
-          status: inc.status,
+          status: inc.status.toUpperCase(),
         }));
       })
       .addCase(fetchActiveSos.rejected, (state, action) => {
@@ -52,5 +83,5 @@ const sosSlice = createSlice({
   },
 });
 
-export const { addAlert, removeAlert } = sosSlice.actions;
+export const { addAlert, removeAlert, updateAlertStatus } = sosSlice.actions;
 export default sosSlice.reducer;

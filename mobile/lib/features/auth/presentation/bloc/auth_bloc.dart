@@ -60,13 +60,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onRegister(AuthRegisterRequested event, Emitter<AuthState> emit) async {
     emit(const AuthLoading());
     try {
-      final mobile = await _register(
+      final (mobile, devOtp) = await _register(
         name: event.name,
         mobile: event.mobile,
         email: event.email,
         password: event.password,
       );
-      emit(AuthOtpSent(mobile));
+      emit(AuthOtpSent(mobile, devOtp: devOtp));
     } catch (e) {
       emit(AuthError(e.toString().replaceFirst('Exception: ', '')));
     }
@@ -84,8 +84,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onResendOtp(AuthOtpResendRequested event, Emitter<AuthState> emit) async {
     try {
-      await _sendOtp(event.mobile);
-      emit(AuthOtpSent(event.mobile));
+      final devOtp = await _sendOtp(event.mobile);
+      emit(AuthOtpSent(event.mobile, devOtp: devOtp));
     } catch (e) {
       emit(AuthError(e.toString().replaceFirst('Exception: ', '')));
     }
