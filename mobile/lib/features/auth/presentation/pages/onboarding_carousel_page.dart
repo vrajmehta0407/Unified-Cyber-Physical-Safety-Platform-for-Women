@@ -22,7 +22,8 @@ class _OnboardingCarouselPageState extends State<OnboardingCarouselPage>
 
   static const _slides = [
     _SlideData(
-      gradientColors: [Color(0xFF1A0A2E), Color(0xFF2D1045)],
+      gradientColors: [Color(0xFF1A0A2E), Color(0xFF2D1045)], // SOS
+      // Premium deep purple-navy for both themes
       accentColor: Color(0xFFEF4444),
       icon: Icons.emergency_share_rounded,
       iconBg: [Color(0xFFEF4444), Color(0xFFB91C1C)],
@@ -96,7 +97,7 @@ class _OnboardingCarouselPageState extends State<OnboardingCarouselPage>
   Widget build(BuildContext context) {
     final slide = _slides[_currentPage];
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFF0F0A1A),
       body: AnimatedContainer(
         duration: const Duration(milliseconds: 400),
         decoration: BoxDecoration(
@@ -168,7 +169,7 @@ class _OnboardingCarouselPageState extends State<OnboardingCarouselPage>
                           child: Text(
                             'Skip',
                             style: GoogleFonts.inter(
-                              color: AppColors.textSecondary,
+                              color: Colors.white.withOpacity(0.6),
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
                             ),
@@ -245,7 +246,7 @@ class _OnboardingCarouselPageState extends State<OnboardingCarouselPage>
                                 style: GoogleFonts.spaceGrotesk(
                                   fontSize: 28,
                                   fontWeight: FontWeight.bold,
-                                  color: AppColors.textPrimary,
+                                  color: Colors.white,
                                   height: 1.2,
                                 ),
                               ),
@@ -255,7 +256,7 @@ class _OnboardingCarouselPageState extends State<OnboardingCarouselPage>
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.inter(
                                   fontSize: 15,
-                                  color: AppColors.textSecondary,
+                                  color: Colors.white.withOpacity(0.6),
                                   height: 1.55,
                                 ),
                               ),
@@ -284,7 +285,7 @@ class _OnboardingCarouselPageState extends State<OnboardingCarouselPage>
                               decoration: BoxDecoration(
                                 color: isActive
                                     ? dot.accentColor
-                                    : AppColors.border,
+                                    : Colors.white.withOpacity(0.25),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                             );

@@ -1,8 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/di/service_locator.dart';
+
+// Dark map style matching safety_map_page
+const _kMapStyle = '''
+[
+  {"featureType":"all","elementType":"labels.text.fill","stylers":[{"color":"#7c93a3"},{"lightness":"-10"}]},
+  {"featureType":"administrative.country","elementType":"geometry","stylers":[{"visibility":"on"}]},
+  {"featureType":"administrative.country","elementType":"geometry.stroke","stylers":[{"color":"#a0a4a5"}]},
+  {"featureType":"administrative.province","elementType":"geometry.stroke","stylers":[{"color":"#62838e"}]},
+  {"featureType":"landscape","elementType":"geometry.fill","stylers":[{"color":"#1a1a2e"}]},
+  {"featureType":"landscape.man_made","elementType":"geometry.fill","stylers":[{"color":"#16213e"}]},
+  {"featureType":"landscape.man_made","elementType":"geometry.stroke","stylers":[{"color":"#23232e"},{"weight":"1"}]},
+  {"featureType":"road","elementType":"geometry","stylers":[{"color":"#0f3460"},{"lightness":"10"}]},
+  {"featureType":"road","elementType":"geometry.stroke","stylers":[{"color":"#1a1a2e"}]},
+  {"featureType":"road.highway","elementType":"geometry.fill","stylers":[{"color":"#0f3460"}]},
+  {"featureType":"road.highway","elementType":"geometry.stroke","stylers":[{"color":"#1a1a2e"}]},
+  {"featureType":"poi","elementType":"geometry.fill","stylers":[{"color":"#1a1a2e"}]},
+  {"featureType":"transit","elementType":"geometry","stylers":[{"color":"#0d0d0d"}]},
+  {"featureType":"water","elementType":"geometry.fill","stylers":[{"color":"#0a0a1a"}]},
+  {"featureType":"water","elementType":"labels.text.fill","stylers":[{"color":"#4e6d70"}]}
+]
+''';
 
 class LiveTrackingPage extends StatefulWidget {
   const LiveTrackingPage({super.key});
@@ -13,9 +36,12 @@ class LiveTrackingPage extends StatefulWidget {
 
 class _LiveTrackingPageState extends State<LiveTrackingPage>
     with SingleTickerProviderStateMixin {
+  GoogleMapController? _mapController;
   double? _lat;
   double? _lng;
   bool _loading = true;
+  Set<Marker> _markers = {};
+  Set<Circle> _circles = {};
 
   late final AnimationController _pulseCtrl;
   late final Animation<double> _pulseAnim;
@@ -34,6 +60,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage>
 
   @override
   void dispose() {
+    _mapController?.dispose();
     _pulseCtrl.dispose();
     super.dispose();
   }
@@ -42,18 +69,51 @@ class _LiveTrackingPageState extends State<LiveTrackingPage>
     setState(() { _loading = true; });
     try {
       final pos = await ServiceLocator.instance.location.getCurrentPosition();
-      setState(() {
-        _lat = pos.latitude;
-        _lng = pos.longitude;
-      });
+      _lat = pos.latitude;
+      _lng = pos.longitude;
     } catch (e) {
-      // Use fallback coords for Ahmedabad for demo
-      setState(() {
-        _lat = 23.0225;
-        _lng = 72.5714;
-      });
-    } finally {
-      if (mounted) setState(() => _loading = false);
+      _lat = 23.0225;
+      _lng = 72.5714;
+    }
+    _buildMapOverlays();
+    if (_mapController != null && _lat != null && _lng != null) {
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(LatLng(_lat!, _lng!), 15.5),
+      );
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  void _buildMapOverlays() {
+    if (_lat == null || _lng == null) return;
+    final userPos = LatLng(_lat!, _lng!);
+    _markers = {
+      Marker(
+        markerId: const MarkerId('user_location'),
+        position: userPos,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+        infoWindow: const InfoWindow(title: 'You are here'),
+      ),
+    };
+    _circles = {
+      Circle(
+        circleId: const CircleId('user_accuracy'),
+        center: userPos,
+        radius: 80,
+        fillColor: AppColors.primary.withOpacity(0.12),
+        strokeColor: AppColors.primary.withOpacity(0.4),
+        strokeWidth: 2,
+      ),
+    };
+  }
+
+  void _onMapCreated(GoogleMapController controller) {
+    _mapController = controller;
+    controller.setMapStyle(_kMapStyle);
+    if (_lat != null && _lng != null) {
+      controller.animateCamera(
+        CameraUpdate.newLatLngZoom(LatLng(_lat!, _lng!), 15.5),
+      );
     }
   }
 
@@ -68,11 +128,28 @@ class _LiveTrackingPageState extends State<LiveTrackingPage>
       body: Column(
         children: [
           _buildHeader(context),
-          // Map placeholder (premium styled)
+          // Live Google Map
           Expanded(
             child: Stack(
               children: [
-                _buildMapPlaceholder(),
+                _loading
+                    ? const Center(
+                        child: CircularProgressIndicator(color: AppColors.primary),
+                      )
+                    : GoogleMap(
+                        onMapCreated: _onMapCreated,
+                        initialCameraPosition: CameraPosition(
+                          target: LatLng(_lat ?? 23.0225, _lng ?? 72.5714),
+                          zoom: 15.5,
+                        ),
+                        markers: _markers,
+                        circles: _circles,
+                        myLocationEnabled: true,
+                        myLocationButtonEnabled: false,
+                        zoomControlsEnabled: false,
+                        compassEnabled: false,
+                        mapToolbarEnabled: false,
+                      ),
                 // User info card at top
                 if (!_loading)
                   Positioned(
@@ -80,6 +157,13 @@ class _LiveTrackingPageState extends State<LiveTrackingPage>
                     left: 16,
                     right: 16,
                     child: _buildUserCard(),
+                  ),
+                // "I Am Safe" floating button
+                if (!_loading)
+                  Positioned(
+                    bottom: 16,
+                    right: 16,
+                    child: _buildIAmSafeButton(context),
                   ),
               ],
             ),
@@ -134,81 +218,61 @@ class _LiveTrackingPageState extends State<LiveTrackingPage>
     );
   }
 
-  Widget _buildMapPlaceholder() {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF0D1B2A), Color(0xFF1A2C3E), Color(0xFF0F2030)],
+  Widget _buildIAmSafeButton(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: AppColors.surface,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text('Confirm Safety',
+                style: GoogleFonts.outfit(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+            content: Text('Are you safe? This will stop location sharing and notify your guardians.',
+                style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 14)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Cancel', style: GoogleFonts.outfit(color: AppColors.textSecondary)),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('✅ You are safe! Guardians have been notified.'),
+                      backgroundColor: AppColors.success,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.success,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: Text('I Am Safe', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.success,
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [BoxShadow(color: AppColors.success.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.verified_user_rounded, color: Colors.white, size: 18),
+            const SizedBox(width: 6),
+            Text("I'm Safe", style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+          ],
         ),
       ),
-      child: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-          : Stack(
-              children: [
-                // Grid lines to simulate map
-                CustomPaint(
-                  size: Size.infinite,
-                  painter: _MapGridPainter(),
-                ),
-                // Route line simulation
-                Center(
-                  child: AnimatedBuilder(
-                    animation: _pulseAnim,
-                    builder: (_, child) => Transform.scale(
-                      scale: _pulseAnim.value,
-                      child: child,
-                    ),
-                    child: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.primary.withOpacity(0.3),
-                        border: Border.all(color: AppColors.primary, width: 2),
-                      ),
-                      child: const Icon(Icons.my_location, color: AppColors.primary, size: 12),
-                    ),
-                  ),
-                ),
-                // Location labels
-                Positioned(
-                  top: 80,
-                  left: 30,
-                  child: _mapLabel('Maninagar'),
-                ),
-                Positioned(
-                  top: 120,
-                  right: 50,
-                  child: _mapLabel('Naroda'),
-                ),
-                Positioned(
-                  bottom: 100,
-                  left: 60,
-                  child: _mapLabel('Bopal'),
-                ),
-                Positioned(
-                  bottom: 140,
-                  right: 30,
-                  child: _mapLabel('Satellite'),
-                ),
-              ],
-            ),
-    );
-  }
-
-  Widget _mapLabel(String name) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.surface.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Text(name, style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 10)),
     );
   }
 
@@ -303,12 +367,17 @@ class _LiveTrackingPageState extends State<LiveTrackingPage>
             onTap: locationUrl == null
                 ? null
                 : () async {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('📍 Live location link copied to clipboard!'),
-                        backgroundColor: AppColors.success,
-                      ),
-                    );
+                    await Clipboard.setData(ClipboardData(text: locationUrl!));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('📍 Live location link copied to clipboard!'),
+                          backgroundColor: AppColors.success,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      );
+                    }
                   },
             child: Container(
               height: 50,
@@ -334,45 +403,4 @@ class _LiveTrackingPageState extends State<LiveTrackingPage>
       ),
     );
   }
-}
-
-class _MapGridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFF1E3A50).withOpacity(0.5)
-      ..strokeWidth = 0.5;
-
-    for (double x = 0; x < size.width; x += 40) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-    }
-    for (double y = 0; y < size.height; y += 40) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-    }
-
-    // Draw some "roads"
-    final roadPaint = Paint()
-      ..color = const Color(0xFF1E4A6E).withOpacity(0.8)
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawLine(
-      Offset(size.width * 0.2, 0),
-      Offset(size.width * 0.2, size.height),
-      roadPaint,
-    );
-    canvas.drawLine(
-      Offset(0, size.height * 0.4),
-      Offset(size.width, size.height * 0.4),
-      roadPaint,
-    );
-    canvas.drawLine(
-      Offset(size.width * 0.6, 0),
-      Offset(size.width * 0.9, size.height),
-      roadPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_MapGridPainter old) => false;
 }

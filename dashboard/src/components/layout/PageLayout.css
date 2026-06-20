@@ -33,8 +33,8 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.07);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 999px;
   padding: 0.375rem 0.875rem;
 }
@@ -54,8 +54,8 @@
 
 .icon-btn {
   width: 36px; height: 36px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.05);
+  border-radius: var(--border-radius-sm);
+  background: var(--input-bg);
   border: 1px solid var(--card-border);
   display: flex; align-items: center; justify-content: center;
   font-size: 0.9375rem;
@@ -63,7 +63,7 @@
   position: relative;
   transition: var(--transition);
 }
-.icon-btn:hover { background: rgba(255,255,255,0.1); }
+.icon-btn:hover { background: var(--hover-bg); }
 
 .notif-dot {
   position: absolute;
@@ -76,8 +76,8 @@
 
 .topbar-avatar {
   width: 36px; height: 36px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--accent), #8B5CF6);
+  border-radius: var(--border-radius-sm);
+  background: linear-gradient(135deg, var(--accent), var(--info));
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-display);
   font-weight: 700;

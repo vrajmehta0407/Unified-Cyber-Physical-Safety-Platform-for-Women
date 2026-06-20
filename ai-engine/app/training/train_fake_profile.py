@@ -36,15 +36,15 @@ def main():
     y = []
     for _, row in df.iterrows():
         profile_data = {
-            "followers": row.get("followers", 0),
-            "following": row.get("following", 0),
-            "posts": row.get("posts", 0),
-            "bio": row.get("bio", ""),
+            "followers": int(row.get("followers", 0)) if pd.notna(row.get("followers", 0)) else 0,
+            "following": int(row.get("following", 0)) if pd.notna(row.get("following", 0)) else 0,
+            "posts": int(row.get("posts", 0)) if pd.notna(row.get("posts", 0)) else 0,
+            "bio": str(row.get("bio", "")) if pd.notna(row.get("bio", "")) else "",
             "has_profile_photo": bool(row.get("has_profile_photo", True)),
-            "account_age_days": row.get("account_age_days", 365),
+            "account_age_days": int(row.get("account_age_days", 365)) if pd.notna(row.get("account_age_days", 365)) else 365,
             "is_verified": bool(row.get("is_verified", False)),
             "has_external_url": bool(row.get("has_external_url", False)),
-            "username": row.get("username", ""),
+            "username": str(row.get("username", "")) if pd.notna(row.get("username", "")) else "",
         }
         features = extract_profile_features(profile_data)
         vector = features_to_vector(features)

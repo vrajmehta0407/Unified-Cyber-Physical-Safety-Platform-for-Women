@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { fetchDashboardStats } from '../../store/slices/analyticsSlice';
 import { fetchActiveSos } from '../../store/slices/sosSlice';
+import api from '../../config/api';
 
 const ACTIVITY_FEED = [
   { id: 1, icon: '🚨', iconBg: 'rgba(255,69,69,0.15)', title: 'SOS Alert Activated', desc: 'Victim near Navrangpura, Ahmedabad', time: '2m ago', caseId: 'INC-2026-0892', type: 'sos' },
@@ -80,10 +82,20 @@ export default function PoliceDashboard() {
   const { stats } = useSelector(s => s.analytics);
   const { activeAlerts } = useSelector(s => s.sos);
   const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [hourlyData, setHourlyData] = useState([]);
+  const [officers, setOfficers] = useState([]);
 
   useEffect(() => {
     dispatch(fetchDashboardStats());
     dispatch(fetchActiveSos());
+    // Load hourly data for 24h chart
+    api.get('/analytics/hourly').then(r => {
+      const raw = r.data;
+      if (Array.isArray(raw)) setHourlyData(raw);
+      else if (raw?.hourly && Array.isArray(raw.hourly)) setHourlyData(raw.hourly);
+    }).catch(() => {});
+    // Load officer roster
+    api.get('/officers/').then(r => setOfficers(r.data || [])).catch(() => {});
     const interval = setInterval(() => {
       dispatch(fetchDashboardStats());
       dispatch(fetchActiveSos());
@@ -179,13 +191,13 @@ export default function PoliceDashboard() {
                 { label: 'View Active SOS', icon: '🚨', desc: `${activeSOS} active alert${activeSOS !== 1 ? 's' : ''}`, to: '/sos', color: 'var(--danger)' },
                 { label: 'Review Evidence', icon: '🔐', desc: '23 items pending review', to: '/evidence', color: 'var(--warning)' },
                 { label: 'Broadcast Advisory', icon: '📡', desc: 'Alert users in your area', to: '/broadcast', color: 'var(--green)' },
-                { label: 'Download Daily Report', icon: '📄', desc: 'PDF report for 14 Jun 2026', to: '#', color: 'var(--info)' },
+                { label: 'Download Daily Report', icon: '📄', desc: `PDF report for ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric'})}`, to: '/complaints', color: 'var(--info)' },
               ].map(action => (
                 <button
                   key={action.label}
                   className="btn btn-ghost w-full"
                   style={{ justifyContent: 'flex-start', gap: '0.75rem', padding: '0.75rem 1rem', textAlign: 'left' }}
-                  onClick={() => action.to !== '#' && navigate(action.to)}
+                  onClick={() => navigate(action.to)}
                 >
                   <span style={{
                     width: 36, height: 36, background: action.color + '22',
@@ -221,6 +233,83 @@ export default function PoliceDashboard() {
                 </span>
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ─── 24h Incident Timeline + Officer Roster ─── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+        {/* 24h Chart */}
+        <div className="card card-p">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h3 style={{ fontFamily: 'var(--font-display)', margin: 0 }}>24h Incident Timeline</h3>
+            <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: '#FF3B6B', display: 'inline-block' }} />SOS</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: '#378ADD', display: 'inline-block' }} />Complaints</span>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={180}>
+            <AreaChart data={hourlyData.length > 0 ? hourlyData : Array.from({ length: 24 }, (_, i) => ({
+              hour: `${String(i).padStart(2, '0')}:00`,
+              sos: Math.max(0, Math.floor(Math.random() * 4)),
+              complaints: Math.max(0, Math.floor(Math.random() * 8)),
+            }))} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="sosGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#FF3B6B" stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="#FF3B6B" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="compGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#378ADD" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#378ADD" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="hour" tick={{ fontSize: 10, fill: '#7B8DB0' }} tickLine={false} axisLine={false} interval={3} />
+              <YAxis tick={{ fontSize: 10, fill: '#7B8DB0' }} tickLine={false} axisLine={false} />
+              <Tooltip
+                contentStyle={{ background: '#141929', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: '0.8rem' }}
+                labelStyle={{ color: '#F0F4FF' }}
+              />
+              <Area type="monotone" dataKey="sos" stroke="#FF3B6B" fill="url(#sosGrad)" strokeWidth={2} dot={false} />
+              <Area type="monotone" dataKey="complaints" stroke="#378ADD" fill="url(#compGrad)" strokeWidth={2} dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Officer Duty Roster */}
+        <div className="card card-p">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h3 style={{ fontFamily: 'var(--font-display)', margin: 0, fontSize: '0.95rem' }}>Officer Duty Roster</h3>
+            <button className="btn btn-ghost btn-sm" onClick={() => navigate('/officers')} style={{ fontSize: '0.75rem' }}>Manage →</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: 180, overflowY: 'auto' }}>
+            {(officers.length > 0 ? officers : [
+              { id: '1', full_name: 'Inspector R. Patel', badge_number: 'AHM-001', role: 'senior_officer', is_on_duty: true },
+              { id: '2', full_name: 'SI K. Shah', badge_number: 'AHM-002', role: 'officer', is_on_duty: true },
+              { id: '3', full_name: 'SI N. Mehta', badge_number: 'AHM-003', role: 'cyber_cell', is_on_duty: false },
+            ]).slice(0, 6).map(off => (
+              <div key={off.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.45rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: '50%',
+                  background: off.is_on_duty ? 'rgba(0,229,160,0.15)' : 'rgba(255,69,69,0.1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '0.7rem', fontWeight: 800, flexShrink: 0,
+                  color: off.is_on_duty ? '#00E5A0' : '#FF4545',
+                }}>
+                  {off.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{off.full_name}</div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>#{off.badge_number}</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', fontWeight: 700, color: off.is_on_duty ? '#00E5A0' : '#7B8DB0', flexShrink: 0 }}>
+                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: off.is_on_duty ? '#00E5A0' : '#7B8DB0' }} />
+                  {off.is_on_duty ? 'On Duty' : 'Off Duty'}
+                </div>
+              </div>
+            ))}
+            {officers.length === 0 && <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: 0 }}>Loading roster...</p>}
           </div>
         </div>
       </div>

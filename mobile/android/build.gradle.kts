@@ -28,6 +28,7 @@ subprojects {
             }
         }
     }
+    
     if (project.state.executed) {
         configureProject()
     } else {

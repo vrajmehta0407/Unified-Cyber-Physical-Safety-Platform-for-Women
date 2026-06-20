@@ -13,6 +13,8 @@ import UnsafeZoneMapPage from './pages/police/UnsafeZoneMapPage';
 import ComplaintManagementPage from './pages/police/ComplaintManagementPage';
 import AnalyticsPage from './pages/police/AnalyticsPage';
 import BroadcastPage from './pages/police/BroadcastPage';
+import FirGeneratorPage from './pages/police/FirGeneratorPage';
+import OfficerManagementPage from './pages/police/OfficerManagementPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagementPage from './pages/admin/UserManagementPage';
 import SystemAnalyticsPage from './pages/admin/SystemAnalyticsPage';
@@ -55,6 +57,8 @@ export default function App() {
         <Route path="erss" element={<ErssIntegrationPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="broadcast" element={<BroadcastPage />} />
+        <Route path="fir" element={<FirGeneratorPage />} />
+        <Route path="officers" element={<OfficerManagementPage />} />
 
         {/* Admin routes */}
         <Route path="admin" element={<AdminDashboard />} />

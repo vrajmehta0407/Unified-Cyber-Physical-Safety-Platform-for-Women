@@ -195,7 +195,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
 
   Widget _buildGetStartedButton(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.go('/register'),
+      onTap: () => context.go('/onboarding'),
       child: Container(
         width: double.infinity,
         height: 56,

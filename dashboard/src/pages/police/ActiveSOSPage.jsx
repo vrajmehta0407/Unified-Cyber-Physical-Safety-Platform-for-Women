@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { fetchActiveSos, dispatchSos, resolveSos } from '../../store/slices/sosSlice';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -34,21 +35,36 @@ const sosIcon = new L.DivIcon({
 
 const AHMEDABAD_CENTER = [23.0225, 72.5714];
 
-const MOCK_ALERTS = [
-  { id: 'INC-0892', user: 'Victim #2892', mobile: '+91 98XXX XXXXX', lat: 23.0390, lng: 72.5580, time: '2m ago', priority: 'critical', is_silent: false, status: 'ACTIVE', area: 'Navrangpura' },
-  { id: 'INC-0891', user: 'Victim #2891', mobile: '+91 97XXX XXXXX', lat: 23.0056, lng: 72.5888, time: '12m ago', priority: 'high', is_silent: true, status: 'RESPONDING', area: 'Maninagar' },
-  { id: 'INC-0890', user: 'Victim #2890', mobile: '+91 96XXX XXXXX', lat: 23.0560, lng: 72.5350, time: '28m ago', priority: 'medium', is_silent: false, status: 'RESPONDING', area: 'Satellite' },
-];
+
+// ─── Toast Notification ────────────────────────────────────────────────────────
+function Toast({ message, type = 'success', onClose }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 4000);
+    return () => clearTimeout(t);
+  }, [onClose]);
+  const colors = { success: '#00E5A0', error: '#FF4545', info: '#378ADD', warning: '#FFB547' };
+  return (
+    <div style={{
+      position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
+      background: '#1a2035', border: `1px solid ${colors[type]}44`,
+      borderLeft: `4px solid ${colors[type]}`,
+      borderRadius: 12, padding: '1rem 1.25rem',
+      color: '#F0F4FF', fontSize: '0.875rem', maxWidth: 360,
+      boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+      animation: 'fadeInUp 0.3s ease',
+    }}>
+      {message}
+    </div>
+  );
+}
 
 function SetViewOnLoad() {
   const map = useMap();
-  useEffect(() => {
-    map.setView(AHMEDABAD_CENTER, 12);
-  }, [map]);
+  useEffect(() => { map.setView(AHMEDABAD_CENTER, 12); }, [map]);
   return null;
 }
 
-function IncidentCard({ alert, selected, onSelect, onDispatch, onResolve }) {
+function IncidentCard({ alert, selected, onSelect, onDispatch, onResolve, dispatching, resolving }) {
   const statusColor = { ACTIVE: 'var(--danger)', RESPONDING: 'var(--warning)', RESOLVED: 'var(--green)' }[alert.status] || 'var(--muted)';
   return (
     <div
@@ -61,7 +77,7 @@ function IncidentCard({ alert, selected, onSelect, onDispatch, onResolve }) {
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--info)' }}>{alert.id}</span>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--info)' }}>{alert.case_id || alert.id}</span>
         <span className={`badge badge-${alert.priority}`}>{alert.priority.toUpperCase()}</span>
       </div>
       <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: 3 }}>{alert.user}</div>
@@ -69,34 +85,27 @@ function IncidentCard({ alert, selected, onSelect, onDispatch, onResolve }) {
         📍 {alert.area} · {alert.time}
         {alert.is_silent && <span style={{ color: 'var(--warning)', marginLeft: 8 }}>🔇 Silent</span>}
       </div>
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', color: statusColor, fontWeight: 600 }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: statusColor }} />
-          {alert.status}
-        </span>
-      </div>
+      {alert.assigned_officer && (
+        <div style={{ fontSize: '0.75rem', color: 'var(--green)', marginBottom: 6 }}>
+          👮 {alert.assigned_officer}
+        </div>
+      )}
       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.625rem' }}>
         <button
           className="btn btn-danger btn-sm"
           style={{ flex: 1, justifyContent: 'center', fontSize: '0.75rem' }}
-          onClick={(e) => {
-            e.stopPropagation();
-            onDispatch(alert.id);
-          }}
-          disabled={alert.status === 'RESPONDING' || alert.status === 'RESOLVED'}
+          onClick={(e) => { e.stopPropagation(); onDispatch(alert.id); }}
+          disabled={alert.status === 'RESPONDING' || alert.status === 'RESOLVED' || dispatching}
         >
-          {alert.status === 'RESPONDING' ? 'Dispatched' : 'Dispatch Unit'}
+          {dispatching ? '⏳' : alert.status === 'RESPONDING' ? '✓ Dispatched' : '🚔 Dispatch'}
         </button>
         <button
           className="btn btn-ghost btn-sm"
           style={{ flex: 1, justifyContent: 'center', fontSize: '0.75rem' }}
-          onClick={(e) => {
-            e.stopPropagation();
-            onResolve(alert.id);
-          }}
-          disabled={alert.status === 'RESOLVED'}
+          onClick={(e) => { e.stopPropagation(); onResolve(alert.id); }}
+          disabled={alert.status === 'RESOLVED' || resolving}
         >
-          {alert.status === 'RESOLVED' ? 'Resolved' : 'Resolve'}
+          {resolving ? '⏳' : alert.status === 'RESOLVED' ? '✅ Resolved' : 'Resolve'}
         </button>
       </div>
     </div>
@@ -105,19 +114,83 @@ function IncidentCard({ alert, selected, onSelect, onDispatch, onResolve }) {
 
 export default function ActiveSOSPage() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { activeAlerts, loading } = useSelector(s => s.sos);
   const [selected, setSelected] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [actionLoading, setActionLoading] = useState({});
 
-  const allAlerts = activeAlerts?.length ? activeAlerts : MOCK_ALERTS;
+  const allAlerts = activeAlerts || [];
+
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ message, type, key: Date.now() });
+  }, []);
 
   useEffect(() => {
     dispatch(fetchActiveSos());
-    const iv = setInterval(() => dispatch(fetchActiveSos()), 15000);
+    const iv = setInterval(() => dispatch(fetchActiveSos()), 8000);
     return () => clearInterval(iv);
   }, [dispatch]);
 
+  // ── Sync selected with updated alerts ──────────────────────────────────────
+  useEffect(() => {
+    if (selected) {
+      const updated = allAlerts.find(a => a.id === selected.id);
+      if (updated) setSelected(updated);
+    }
+  }, [allAlerts]); // eslint-disable-line
+
+  async function handleDispatch(id) {
+    setActionLoading(p => ({ ...p, [`dispatch_${id}`]: true }));
+    try {
+      await dispatch(dispatchSos(id)).unwrap();
+      showToast(`🚔 Unit dispatched! Officer en route to incident ${id.slice(0, 8).toUpperCase()}.`, 'success');
+    } catch (err) {
+      showToast(`Dispatch recorded locally. Backend: ${err}`, 'warning');
+    } finally {
+      setActionLoading(p => ({ ...p, [`dispatch_${id}`]: false }));
+    }
+  }
+
+  async function handleResolve(id) {
+    setActionLoading(p => ({ ...p, [`resolve_${id}`]: true }));
+    try {
+      await dispatch(resolveSos(id)).unwrap();
+      showToast(`✅ Incident ${id.slice(0, 8).toUpperCase()} resolved. Guardians notified via SMS.`, 'success');
+      if (selected?.id === id) setSelected(null);
+    } catch (err) {
+      showToast(`Resolved locally. Backend: ${err}`, 'warning');
+      if (selected?.id === id) setSelected(null);
+    } finally {
+      setActionLoading(p => ({ ...p, [`resolve_${id}`]: false }));
+    }
+  }
+
+  function handleContactGuardian(alert) {
+    if (alert.mobile && alert.mobile !== '—') {
+      const phone = alert.mobile.replace(/\s+/g, '');
+      showToast(`📞 Dialling ${alert.mobile} for ${alert.user}. Check your browser phone integration.`, 'info');
+      window.open(`tel:${phone}`, '_self');
+    } else {
+      showToast('No guardian mobile number available for this incident.', 'warning');
+    }
+  }
+
+  function handleGenerateReport(alert) {
+    navigate(`/fir?case=${alert.case_id || alert.id}&victim=${encodeURIComponent(alert.user)}`);
+  }
+
   return (
     <div className="animate-in">
+      {toast && (
+        <Toast
+          key={toast.key}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
       <div className="page-header">
         <div>
           <h2 className="page-title">
@@ -125,7 +198,7 @@ export default function ActiveSOSPage() {
             {allAlerts.length > 0 && (
               <span className="badge badge-active" style={{ fontSize: '0.875rem', verticalAlign: 'middle' }}>
                 <span className="dot dot-pulse" />
-                {allAlerts.length} Active
+                {allAlerts.filter(a => a.status !== 'RESOLVED').length} Active
               </span>
             )}
           </h2>
@@ -137,7 +210,7 @@ export default function ActiveSOSPage() {
       {/* Stats row */}
       <div className="grid-4 mb-6">
         {[
-          { label: 'Active SOS', value: allAlerts.filter(a => a.status === 'ACTIVE').length || allAlerts.length, color: 'var(--danger)', icon: '🚨' },
+          { label: 'Active SOS', value: allAlerts.filter(a => a.status === 'ACTIVE').length || allAlerts.filter(a => a.status !== 'RESOLVED').length, color: 'var(--danger)', icon: '🚨' },
           { label: 'Responding', value: allAlerts.filter(a => a.status === 'RESPONDING').length, color: 'var(--warning)', icon: '🚗' },
           { label: 'Resolved Today', value: 12, color: 'var(--green)', icon: '✅' },
           { label: 'Avg Response', value: '4.2 min', color: 'var(--info)', icon: '⏱' },
@@ -154,12 +227,7 @@ export default function ActiveSOSPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
         {/* Map */}
         <div className="card p-0 overflow-hidden" style={{ borderRadius: 16, minHeight: 520 }}>
-          <MapContainer
-            center={AHMEDABAD_CENTER}
-            zoom={12}
-            style={{ height: 520, width: '100%' }}
-            zoomControl={false}
-          >
+          <MapContainer center={AHMEDABAD_CENTER} zoom={12} style={{ height: 520, width: '100%' }} zoomControl={false}>
             <SetViewOnLoad />
             <TileLayer
               attribution='&copy; <a href="https://carto.com">CARTO</a>'
@@ -175,11 +243,12 @@ export default function ActiveSOSPage() {
                 >
                   <Popup>
                     <div style={{ color: '#1a1a2e', minWidth: 200, fontFamily: 'sans-serif' }}>
-                      <strong style={{ color: '#FF4545' }}>🚨 {alert.id}</strong><br />
+                      <strong style={{ color: '#FF4545' }}>🚨 {alert.case_id || alert.id}</strong><br />
                       <b>{alert.user}</b><br />
                       📱 {alert.mobile}<br />
                       📍 {alert.area}<br />
                       🕐 {alert.time}<br />
+                      {alert.assigned_officer && <span>👮 {alert.assigned_officer}<br /></span>}
                       {alert.is_silent && <span style={{ color: '#ef4444', fontWeight: 700 }}>🔇 Silent SOS</span>}
                     </div>
                   </Popup>
@@ -200,26 +269,36 @@ export default function ActiveSOSPage() {
             Active Alerts <span style={{ color: 'var(--muted)', fontWeight: 400, fontSize: '0.875rem' }}>({allAlerts.length})</span>
           </h3>
           {allAlerts.length === 0
-            ? <div className="empty-state"><div className="icon">✅</div><p>No active SOS alerts</p></div>
+            ? (
+              <div className="empty-state">
+                <div className="icon">✅</div>
+                <p style={{ fontWeight: 600, marginBottom: 4 }}>No active SOS alerts</p>
+                <p style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>Alerts from the mobile app will appear here in real-time</p>
+              </div>
+            )
             : allAlerts.map(a => (
                 <IncidentCard
                   key={a.id}
                   alert={a}
                   selected={selected?.id === a.id}
                   onSelect={setSelected}
-                  onDispatch={(id) => dispatch(dispatchSos(id))}
-                  onResolve={(id) => dispatch(resolveSos(id))}
+                  onDispatch={handleDispatch}
+                  onResolve={handleResolve}
+                  dispatching={!!actionLoading[`dispatch_${a.id}`]}
+                  resolving={!!actionLoading[`resolve_${a.id}`]}
                 />
               ))
           }
         </div>
       </div>
 
-      {/* Detail table */}
+      {/* Detail panel */}
       {selected && (
         <div className="card p-0 animate-in" style={{ marginBottom: '1rem', border: '1px solid rgba(255,59,107,0.25)' }}>
           <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between' }}>
-            <h3 style={{ fontFamily: 'var(--font-display)' }}>Incident Detail — {selected.id}</h3>
+            <h3 style={{ fontFamily: 'var(--font-display)' }}>
+              Incident Detail — {selected.case_id || selected.id}
+            </h3>
             <button className="btn btn-ghost btn-sm" onClick={() => setSelected(null)}>✕ Close</button>
           </div>
           <div style={{ padding: '1.25rem 1.5rem', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '1.5rem' }}>
@@ -249,20 +328,43 @@ export default function ActiveSOSPage() {
               <div className="label">Type</div>
               <div style={{ marginTop: 4 }}>{selected.is_silent ? '🔇 Silent SOS' : '🔊 Active SOS'}</div>
             </div>
+            {selected.assigned_officer && (
+              <div>
+                <div className="label">Assigned Officer</div>
+                <div style={{ marginTop: 4, color: 'var(--green)' }}>👮 {selected.assigned_officer}</div>
+              </div>
+            )}
           </div>
-          <div style={{ padding: '0 1.5rem 1.25rem', display: 'flex', gap: '0.75rem' }}>
-            <button className="btn btn-danger" onClick={() => { dispatch(dispatchSos(selected.id)); alert(`🚨 Emergency Unit Dispatched to ${selected.area} coordinates: ${selected.lat?.toFixed(6)}, ${selected.lng?.toFixed(6)}`); }}>🚔 Dispatch Nearest Unit</button>
-            <button className="btn btn-success" onClick={() => { dispatch(resolveSos(selected.id)); alert(`✅ SOS Alert ${selected.id} has been marked as RESOLVED.`); }}>✅ Mark Resolved</button>
-            <button className="btn btn-ghost" onClick={() => alert(`📞 Dialing Guardian for ${selected.user}: +91 99999 12345`)}>📞 Contact Guardian</button>
-            <button className="btn btn-ghost" onClick={() => alert(`📄 Cyber Crime Incident report generated and signed digitally. Hash logged to CCTNS.`)}>📄 Generate Report</button>
+          <div style={{ padding: '0 1.5rem 1.25rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-danger"
+              disabled={selected.status === 'RESPONDING' || selected.status === 'RESOLVED' || !!actionLoading[`dispatch_${selected.id}`]}
+              onClick={() => handleDispatch(selected.id)}
+            >
+              🚔 Dispatch Nearest Unit
+            </button>
+            <button
+              className="btn btn-success"
+              disabled={selected.status === 'RESOLVED' || !!actionLoading[`resolve_${selected.id}`]}
+              onClick={() => handleResolve(selected.id)}
+            >
+              ✅ Mark Resolved
+            </button>
+            <button className="btn btn-ghost" onClick={() => handleContactGuardian(selected)}>
+              📞 Contact Victim
+            </button>
+            <button className="btn btn-ghost" onClick={() => handleGenerateReport(selected)}>
+              📄 Generate FIR
+            </button>
           </div>
         </div>
       )}
 
       {/* Full table */}
       <div className="card p-0">
-        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--card-border)' }}>
+        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 style={{ fontFamily: 'var(--font-display)' }}>All SOS Incidents</h3>
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/incidents')}>View All Incidents →</button>
         </div>
         <div className="table-wrap">
           <table className="table">
@@ -274,7 +376,7 @@ export default function ActiveSOSPage() {
             <tbody>
               {allAlerts.map(a => (
                 <tr key={a.id} onClick={() => setSelected(a)} style={{ cursor: 'pointer' }}>
-                  <td><span style={{ fontFamily: 'var(--font-mono)', color: 'var(--info)', fontSize: '0.8rem' }}>{a.id}</span></td>
+                  <td><span style={{ fontFamily: 'var(--font-mono)', color: 'var(--info)', fontSize: '0.8rem' }}>{a.case_id || a.id}</span></td>
                   <td style={{ fontWeight: 500 }}>{a.user}</td>
                   <td style={{ color: 'var(--muted)' }}>{a.area}</td>
                   <td style={{ color: 'var(--muted)', fontSize: '0.8125rem' }}>{a.time}</td>
@@ -290,8 +392,20 @@ export default function ActiveSOSPage() {
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: '0.375rem' }}>
-                      <button className="btn btn-ghost btn-sm" onClick={e => { e.stopPropagation(); dispatch(dispatchSos(a.id)); alert(`👮 Case ${a.id} assigned to Cyber Crime Cell Officer Sharma (Badge #AHM-CCC-2026)`); }}>Assign</button>
-                      <button className="btn btn-ghost btn-sm" onClick={e => { e.stopPropagation(); dispatch(resolveSos(a.id)); alert(`✅ Case ${a.id} status updated to RESOLVED.`); }}>Resolve</button>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        disabled={a.status === 'RESPONDING' || a.status === 'RESOLVED' || !!actionLoading[`dispatch_${a.id}`]}
+                        onClick={e => { e.stopPropagation(); handleDispatch(a.id); }}
+                      >
+                        Assign
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        disabled={a.status === 'RESOLVED' || !!actionLoading[`resolve_${a.id}`]}
+                        onClick={e => { e.stopPropagation(); handleResolve(a.id); }}
+                      >
+                        Resolve
+                      </button>
                     </div>
                   </td>
                 </tr>

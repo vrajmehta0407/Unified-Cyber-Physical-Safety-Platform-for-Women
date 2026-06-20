@@ -9,6 +9,8 @@ class ApiConstants {
   static const authOtpVerify = '/auth/otp/verify';
   static const sosTrigger = '/sos/trigger';
   static const sosCancel = '/sos/cancel';
+  static String sosResolve(String id) => '/sos/resolve/$id';
+  static const sosActive = '/sos/active';
   static const evidenceUpload = '/evidence/upload';
   static const evidenceList = '/evidence/list';
   static const reports = '/reports/';

@@ -10,10 +10,18 @@ class ApiService {
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 15),
     ));
+    _dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) {
+        print("DIO REQ: ${options.method} ${options.path} - Headers: ${options.headers}");
+        return handler.next(options);
+      },
+    ));
   }
 
   void setToken(String token) {
+    print("ApiService.setToken() called with: $token");
     _dio.options.headers['Authorization'] = 'Bearer $token';
+    print("Current headers: ${_dio.options.headers}");
   }
 
   Future<Response> get(String path, {Map<String, dynamic>? queryParameters}) =>

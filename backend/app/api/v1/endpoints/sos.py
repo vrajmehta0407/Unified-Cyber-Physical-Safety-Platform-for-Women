@@ -1,3 +1,12 @@
+"""
+CyberShield — SOS Endpoints
+─────────────────────────────
+POST /sos/trigger           → trigger SOS (mobile)
+POST /sos/cancel            → cancel SOS (mobile)
+GET  /sos/active            → list active SOS (police/admin only)
+GET  /sos/status/{id}       → get single SOS status
+"""
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -8,36 +17,45 @@ from app.schemas.incident_schema import IncidentWithUserResponse
 from app.schemas.sos_schema import SOSCancelRequest, SOSResponse, SOSTriggerRequest
 from app.services.erss_service import dispatch_erss_alert
 from app.services.sos_service import cancel_sos, trigger_sos
+from app.services.sos_service_resolve import resolve_sos
 
 router = APIRouter(prefix="/sos", tags=["SOS"])
 
 
+def _inc_to_response(inc: Incident, user: User) -> IncidentWithUserResponse:
+    return IncidentWithUserResponse(
+        id=inc.id,
+        user_id=inc.user_id,
+        case_id=inc.case_id,
+        type=inc.type,
+        status=inc.status,
+        lat=inc.lat,
+        lng=inc.lng,
+        address=inc.address,
+        is_silent=inc.is_silent,
+        assigned_officer_name=inc.assigned_officer_name,
+        created_at=inc.created_at,
+        resolved_at=inc.resolved_at,
+        user_name=user.name,
+        user_mobile=user.mobile,
+    )
+
+
 @router.get("/active", response_model=list[IncidentWithUserResponse])
-def list_active_sos(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def list_active_sos(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     if current_user.role not in ("admin", "police"):
         return []
     rows = (
         db.query(Incident, User)
         .join(User, Incident.user_id == User.id)
-        .filter(Incident.type == "sos", Incident.status == "active")
+        .filter(Incident.type == "sos", Incident.status.in_(("active", "responding")))
         .order_by(Incident.created_at.desc())
         .all()
     )
-    return [
-        IncidentWithUserResponse(
-            id=inc.id,
-            user_id=inc.user_id,
-            type=inc.type,
-            status=inc.status,
-            lat=inc.lat,
-            lng=inc.lng,
-            is_silent=inc.is_silent,
-            created_at=inc.created_at,
-            user_name=user.name,
-            user_mobile=user.mobile,
-        )
-        for inc, user in rows
-    ]
+    return [_inc_to_response(inc, user) for inc, user in rows]
 
 
 @router.post("/trigger", response_model=SOSResponse)
@@ -47,7 +65,10 @@ def trigger_sos_endpoint(
     current_user: User = Depends(get_current_user),
 ):
     incident = trigger_sos(db, current_user.id, data.lat, data.lng, data.is_silent)
-    dispatch_erss_alert(data.lat, data.lng)
+    try:
+        dispatch_erss_alert(data.lat, data.lng)
+    except Exception:
+        pass  # ERSS is best-effort
     return incident
 
 
@@ -69,9 +90,9 @@ def get_sos_status(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    from app.models import Incident
     incident = db.query(Incident).filter(
-        Incident.id == incident_id, Incident.user_id == current_user.id
+        Incident.id == incident_id,
+        Incident.user_id == current_user.id,
     ).first()
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")

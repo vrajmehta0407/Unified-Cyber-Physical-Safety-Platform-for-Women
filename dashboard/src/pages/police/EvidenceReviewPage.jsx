@@ -1,16 +1,29 @@
-import { useState } from 'react';
-
-const MOCK_EVIDENCE = [
-  { id: 'EVD-0001', filename: 'deepfake_video_01.mp4', type: 'video', size: '42.8 MB', caseId: 'CYB-AHM-0441', uploadedAt: '14 Jun 2026, 11:22', hash: 'a3f8c2d1e9b4f762a3f8c2d1e9b4f762a3f8c2d1e9b4f762a3f8c2d1e9b4f7', verified: true, courtAdmissible: false, custody: [{ who: 'User Upload', when: '14 Jun 11:22', action: 'Uploaded' }, { who: 'System', when: '14 Jun 11:22', action: 'Hash Verified' }] },
-  { id: 'EVD-0002', filename: 'screenshot_chat_01.jpg', type: 'image', size: '1.2 MB', caseId: 'CYB-AHM-0441', uploadedAt: '14 Jun 2026, 11:20', hash: 'b4e9d3f2a1c7e895b4e9d3f2a1c7e895b4e9d3f2a1c7e895b4e9d3f2a1c7e8', verified: true, courtAdmissible: true, custody: [{ who: 'User Upload', when: '14 Jun 11:20', action: 'Uploaded' }, { who: 'System', when: '14 Jun 11:20', action: 'Hash Verified' }, { who: 'SI Patel R.', when: '14 Jun 14:00', action: 'Marked Court-Admissible' }] },
-  { id: 'EVD-0003', filename: 'chat_export_whatsapp.pdf', type: 'document', size: '856 KB', caseId: 'CYB-AHM-0440', uploadedAt: '14 Jun 2026, 10:48', hash: 'c5f1e4a3b2d8f906c5f1e4a3b2d8f906c5f1e4a3b2d8f906c5f1e4a3b2d8f9', verified: true, courtAdmissible: false, custody: [{ who: 'User Upload', when: '14 Jun 10:48', action: 'Uploaded' }, { who: 'System', when: '14 Jun 10:48', action: 'Hash Verified' }] },
-  { id: 'EVD-0004', filename: 'call_recording_fraud.mp3', type: 'audio', size: '18.4 MB', caseId: 'CYB-AHM-0439', uploadedAt: '14 Jun 2026, 09:35', hash: 'd6a2f5b4c3e9g017d6a2f5b4c3e9g017d6a2f5b4c3e9g017d6a2f5b4c3e9g0', verified: false, courtAdmissible: false, custody: [{ who: 'User Upload', when: '14 Jun 09:35', action: 'Uploaded' }] },
-  { id: 'EVD-0005', filename: 'fake_profile_screenshots.zip', type: 'archive', size: '3.7 MB', caseId: 'CYB-AHM-0438', uploadedAt: '14 Jun 2026, 08:20', hash: 'e7b3g6c5d4f0h128e7b3g6c5d4f0h128e7b3g6c5d4f0h128e7b3g6c5d4f0h1', verified: true, courtAdmissible: true, custody: [{ who: 'User Upload', when: '14 Jun 08:20', action: 'Uploaded' }, { who: 'System', when: '14 Jun 08:20', action: 'Hash Verified' }, { who: 'SI Mehta K.', when: '14 Jun 12:30', action: 'Reviewed — Marked Admissible' }] },
-  { id: 'EVD-0006', filename: 'phishing_url_screenshot.png', type: 'image', size: '580 KB', caseId: 'CYB-AHM-0437', uploadedAt: '13 Jun 2026, 23:05', hash: 'f8c4h7d6e5g1i239f8c4h7d6e5g1i239f8c4h7d6e5g1i239f8c4h7d6e5g1i2', verified: true, courtAdmissible: false, custody: [{ who: 'User Upload', when: '13 Jun 23:05', action: 'Uploaded' }, { who: 'System', when: '13 Jun 23:05', action: 'Hash Verified' }] },
-];
+import { useState, useEffect } from 'react';
+import { evidenceService } from '../../services/incidentService';
 
 const TYPE_ICON = { image: '🖼', video: '🎥', audio: '🎵', document: '📄', archive: '📦' };
 const TYPE_COLOR = { image: 'rgba(77,166,255,0.15)', video: 'rgba(255,59,107,0.12)', audio: 'rgba(0,229,160,0.1)', document: 'rgba(255,181,71,0.12)', archive: 'rgba(139,92,246,0.12)' };
+
+function getFileType(mimeType) {
+  if (!mimeType) return 'document';
+  if (mimeType.startsWith('image/')) return 'image';
+  if (mimeType.startsWith('video/')) return 'video';
+  if (mimeType.startsWith('audio/')) return 'audio';
+  if (mimeType.includes('zip') || mimeType.includes('archive') || mimeType.includes('tar')) return 'archive';
+  return 'document';
+}
+
+function formatSize(bytes) {
+  if (!bytes) return '—';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
 
 function CustodyTimeline({ custody }) {
   return (
@@ -23,7 +36,7 @@ function CustodyTimeline({ custody }) {
           </div>
           <div style={{ paddingBottom: i < custody.length - 1 ? 12 : 0 }}>
             <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{entry.action}</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{entry.who} · {entry.when}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{entry.actor} · {formatDate(entry.timestamp)}</div>
           </div>
         </div>
       ))}
@@ -31,45 +44,64 @@ function CustodyTimeline({ custody }) {
   );
 }
 
-function EvidenceCard({ ev, onMarkAdmissible, onFlag }) {
+function EvidenceCard({ ev, onMarkAdmissible }) {
   const [expanded, setExpanded] = useState(false);
+  const [custody, setCustody] = useState([]);
+  const [loadingCustody, setLoadingCustody] = useState(false);
+
+  const fileType = getFileType(ev.mime_type);
+  const filename = ev.original_filename || ev.file_path?.split('/').pop() || 'unknown';
+  const caseId = ev.incident_id ? `INC-${ev.incident_id.slice(0, 8)}` : 'Unlinked';
+
+  async function loadCustody() {
+    if (custody.length > 0) return;
+    setLoadingCustody(true);
+    try {
+      const { data } = await evidenceService.getCustody(ev.id);
+      setCustody(data);
+    } catch {
+      setCustody([{ action: 'Uploaded', actor: 'System', timestamp: ev.timestamp }]);
+    } finally {
+      setLoadingCustody(false);
+    }
+  }
+
+  function handleToggleCustody() {
+    setExpanded(!expanded);
+    if (!expanded) loadCustody();
+  }
 
   return (
     <div style={{
-      background: 'var(--surface)', border: `1px solid ${ev.verified ? 'rgba(0,229,160,0.15)' : 'rgba(255,69,69,0.15)'}`,
+      background: 'var(--surface)', border: `1px solid ${ev.verified !== false ? 'rgba(0,229,160,0.15)' : 'rgba(255,69,69,0.15)'}`,
       borderRadius: 14, overflow: 'hidden', transition: 'all 0.2s ease',
     }}>
-      {/* Type preview */}
       <div style={{
-        height: 72, background: TYPE_COLOR[ev.type] || 'rgba(255,255,255,0.04)',
+        height: 72, background: TYPE_COLOR[fileType] || 'rgba(255,255,255,0.04)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: '2rem', borderBottom: '1px solid var(--card-border)',
       }}>
-        {TYPE_ICON[ev.type]}
+        {TYPE_ICON[fileType] || '📄'}
       </div>
 
       <div style={{ padding: '0.875rem' }}>
-        {/* Filename */}
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {ev.filename}
+          {filename}
         </div>
 
-        {/* Case + size */}
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--info)' }}>{ev.caseId}</span>
-          <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>{ev.size}</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--info)' }}>{caseId}</span>
+          <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>{formatSize(ev.file_size)}</span>
         </div>
 
-        {/* Hash */}
         <div className="hash-chip" style={{ width: '100%', marginBottom: 8, overflow: 'hidden', cursor: 'pointer' }} title={ev.hash}>
           <span>🔗</span>
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {ev.hash.slice(0, 20)}...
+            {ev.hash?.slice(0, 20)}...
           </span>
         </div>
 
-        {/* Verification badge */}
-        {ev.verified
+        {ev.verified !== false
           ? <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: 'var(--green)', marginBottom: 6, fontWeight: 600 }}>
               ✓ Verified Untampered
             </div>
@@ -78,36 +110,41 @@ function EvidenceCard({ ev, onMarkAdmissible, onFlag }) {
             </div>
         }
 
-        {/* Court admissible */}
-        {ev.courtAdmissible && (
+        {ev.court_admissible && (
           <div style={{ fontSize: '0.7rem', color: 'var(--green)', background: 'rgba(0,229,160,0.08)', border: '1px solid rgba(0,229,160,0.2)', borderRadius: 6, padding: '0.2rem 0.5rem', marginBottom: 8, display: 'inline-block' }}>
             ⚖ Court-Admissible
           </div>
         )}
 
-        {/* Actions */}
         <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap', marginTop: 6 }}>
-          <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.7rem', padding: '0.25rem 0.625rem' }} onClick={() => alert(`👁 Launching forensic viewer for ${ev.filename}. Format: ${ev.type.toUpperCase()}`)}>👁 Preview</button>
-          <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.7rem', padding: '0.25rem 0.625rem' }} onClick={() => alert(`⬇ Downloading decrypted binary: ${ev.filename}. SHA256: ${ev.hash}`)}>⬇ Download</button>
-          {!ev.courtAdmissible && (
+          <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.7rem', padding: '0.25rem 0.625rem' }} onClick={() => alert(`👁 Launching forensic viewer for ${filename}. Format: ${fileType.toUpperCase()}`)}>👁 Preview</button>
+          <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.7rem', padding: '0.25rem 0.625rem' }} onClick={() => alert(`⬇ Downloading decrypted binary: ${filename}. SHA256: ${ev.hash}`)}>⬇ Download</button>
+          {!ev.court_admissible && (
             <button className="btn btn-success btn-sm" style={{ fontSize: '0.7rem', padding: '0.25rem 0.625rem' }} onClick={() => onMarkAdmissible(ev.id)}>
               ⚖ Admit
             </button>
           )}
         </div>
 
-        {/* Chain of custody toggle */}
         <button
           className="btn btn-ghost btn-sm"
           style={{ marginTop: 8, width: '100%', justifyContent: 'center', fontSize: '0.75rem' }}
-          onClick={() => setExpanded(!expanded)}
+          onClick={handleToggleCustody}
         >
-          {expanded ? '▲ Hide' : '▼ Chain of Custody'} ({ev.custody.length})
+          {expanded ? '▲ Hide' : '▼ Chain of Custody'} ({custody.length || '...'})
         </button>
 
         {expanded && (
           <div style={{ marginTop: 8, padding: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
-            <CustodyTimeline custody={ev.custody} />
+            {loadingCustody
+              ? <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '0.8rem' }}>Loading...</div>
+              : custody.length > 0
+                ? <CustodyTimeline custody={custody} />
+                : <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '0.8rem' }}>
+                    <div style={{ fontSize: '0.8rem' }}>Uploaded</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>System · {formatDate(ev.timestamp)}</div>
+                  </div>
+            }
           </div>
         )}
       </div>
@@ -116,23 +153,56 @@ function EvidenceCard({ ev, onMarkAdmissible, onFlag }) {
 }
 
 export default function EvidenceReviewPage() {
-  const [evidence, setEvidence] = useState(MOCK_EVIDENCE);
+  const [evidence, setEvidence] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [filterType, setFilterType] = useState('');
   const [filterVerified, setFilterVerified] = useState('');
   const [search, setSearch] = useState('');
 
+  useEffect(() => {
+    fetchEvidence();
+  }, []);
+
+  async function fetchEvidence() {
+    setLoading(true);
+    try {
+      const { data } = await evidenceService.getAll();
+      setEvidence(data);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to load evidence');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function markAdmissible(id) {
+    try {
+      await evidenceService.review(id, {
+        court_admissible: true,
+        custody_action: 'Marked Court-Admissible',
+        custody_actor: 'Reviewing Officer',
+      });
+      setEvidence(prev => prev.map(e => e.id === id ? { ...e, court_admissible: true } : e));
+    } catch (err) {
+      alert('Failed to update evidence: ' + (err.response?.data?.detail || err.message));
+    }
+  }
+
   const filtered = evidence.filter(e => {
-    if (filterType && e.type !== filterType) return false;
-    if (filterVerified === 'verified' && !e.verified) return false;
-    if (filterVerified === 'unverified' && e.verified) return false;
-    if (filterVerified === 'admissible' && !e.courtAdmissible) return false;
-    if (search && !e.caseId.includes(search.toUpperCase()) && !e.filename.toLowerCase().includes(search.toLowerCase())) return false;
+    const fileType = getFileType(e.mime_type);
+    const filename = e.original_filename || e.file_path?.split('/').pop() || '';
+    if (filterType && fileType !== filterType) return false;
+    if (filterVerified === 'verified' && e.verified === false) return false;
+    if (filterVerified === 'unverified' && e.verified !== false) return false;
+    if (filterVerified === 'admissible' && !e.court_admissible) return false;
+    if (search) {
+      const searchLower = search.toLowerCase();
+      const caseId = e.incident_id ? e.incident_id.slice(0, 8) : '';
+      if (!caseId.includes(searchLower) && !filename.toLowerCase().includes(searchLower)) return false;
+    }
     return true;
   });
-
-  function markAdmissible(id) {
-    setEvidence(prev => prev.map(e => e.id === id ? { ...e, courtAdmissible: true, custody: [...e.custody, { who: 'Reviewing Officer', when: new Date().toLocaleString('en-IN'), action: 'Marked Court-Admissible' }] } : e));
-  }
 
   return (
     <div className="animate-in">
@@ -141,16 +211,16 @@ export default function EvidenceReviewPage() {
           <h2 className="page-title">🔐 Evidence Review & Vault</h2>
           <p className="page-subtitle">AES-256 encrypted — SHA-256 tamper-proof verification — Chain of custody logs</p>
         </div>
-        <button className="btn btn-primary btn-sm">📤 Upload Evidence</button>
+        <button className="btn btn-primary btn-sm" onClick={fetchEvidence}>🔄 Refresh</button>
       </div>
 
       {/* Stats */}
       <div className="grid-4 mb-6">
         {[
           { label: 'Total Evidence', value: evidence.length, icon: '📁', color: 'var(--text)' },
-          { label: 'Hash Verified', value: evidence.filter(e => e.verified).length, icon: '✅', color: 'var(--green)' },
-          { label: 'Pending Review', value: evidence.filter(e => !e.courtAdmissible).length, icon: '⏳', color: 'var(--warning)' },
-          { label: 'Court-Admissible', value: evidence.filter(e => e.courtAdmissible).length, icon: '⚖', color: 'var(--purple)' },
+          { label: 'Hash Verified', value: evidence.filter(e => e.verified !== false).length, icon: '✅', color: 'var(--green)' },
+          { label: 'Pending Review', value: evidence.filter(e => !e.court_admissible).length, icon: '⏳', color: 'var(--warning)' },
+          { label: 'Court-Admissible', value: evidence.filter(e => e.court_admissible).length, icon: '⚖', color: 'var(--purple)' },
         ].map(s => (
           <div key={s.label} className="card card-p" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '1.5rem' }}>{s.icon}</div>
@@ -177,18 +247,25 @@ export default function EvidenceReviewPage() {
         <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--muted)' }}>{filtered.length} items</span>
       </div>
 
+      {/* Loading / Error */}
+      {loading && <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--muted)' }}>Loading evidence from vault...</div>}
+      {error && <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--danger)', background: 'rgba(255,69,69,0.08)', borderRadius: 12 }}>{error}</div>}
+
       {/* Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
-        {filtered.map(ev => (
-          <EvidenceCard key={ev.id} ev={ev} onMarkAdmissible={markAdmissible} />
-        ))}
-        {filtered.length === 0 && (
-          <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
-            <div className="icon">🔐</div>
-            <p>No evidence matches your filters</p>
-          </div>
-        )}
-      </div>
+      {!loading && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
+          {filtered.map(ev => (
+            <EvidenceCard key={ev.id} ev={ev} onMarkAdmissible={markAdmissible} />
+          ))}
+          {filtered.length === 0 && (
+            <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
+              <div className="icon">🔐</div>
+              <p>No evidence matches your filters</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
+

@@ -1,6 +1,6 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
-const COLORS = ['#7c3aed', '#ec4899', '#ef4444', '#eab308', '#22c55e'];
+const COLORS = ['#2D6BFF', '#8B5CF6', '#00E5A0', '#FFB547', '#FF4545'];
 
 export default function IncidentTypeChart({ data }) {
   return (
@@ -9,7 +9,7 @@ export default function IncidentTypeChart({ data }) {
         <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
           {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
         </Pie>
-        <Tooltip contentStyle={{ background: '#221a3a', border: '1px solid #2d2450' }} />
+        <Tooltip contentStyle={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', borderRadius: 'var(--border-radius-sm)', color: 'var(--text)' }} />
         <Legend />
       </PieChart>
     </ResponsiveContainer>

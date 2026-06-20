@@ -18,12 +18,14 @@ const NAV_SECTIONS = [
     items: [
       { to: '/complaints', label: 'Cyber Complaints', icon: '💻' },
       { to: '/evidence', label: 'Evidence Vault', icon: '🔐' },
+      { to: '/fir', label: 'FIR Generator', icon: '📄' },
       { to: '/analytics', label: 'Analytics', icon: '📊' },
     ],
   },
   {
     label: 'Tools',
     items: [
+      { to: '/officers', label: 'Officer Roster', icon: '👮' },
       { to: '/zones', label: 'Unsafe Zones', icon: '🗺️' },
       { to: '/broadcast', label: 'Broadcast Advisory', icon: '📡' },
       { to: '/cctns', label: 'CCTNS Integration', icon: '🔗' },

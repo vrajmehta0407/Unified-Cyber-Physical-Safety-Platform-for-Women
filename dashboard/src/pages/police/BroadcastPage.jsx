@@ -1,14 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { broadcastService } from '../../services/incidentService';
 
 const CATEGORIES = ['Scam Alert', 'Safety Advisory', 'System Update', 'Emergency Notice'];
 const TARGETS = ['All Users', 'Ahmedabad City', 'Satellite Zone', 'Navrangpura Zone', 'Maninagar Zone', 'Custom Radius'];
 
-const PAST_BROADCASTS = [
-  { id: 'BCT-047', title: 'SIM Swap Fraud Alert — Telecom Impersonation', category: 'Scam Alert', sentAt: '14 Jun 2026, 09:00', target: 'Ahmedabad City', delivered: 12847, openRate: 64, status: 'sent' },
-  { id: 'BCT-046', title: 'Night Safety Advisory — Avoid Isolated Areas', category: 'Safety Advisory', sentAt: '13 Jun 2026, 20:00', target: 'All Users', delivered: 28430, openRate: 71, status: 'sent' },
-  { id: 'BCT-045', title: 'Deepfake Scam Warning — Instagram DMs', category: 'Scam Alert', sentAt: '12 Jun 2026, 14:30', target: 'All Users', delivered: 31200, openRate: 58, status: 'sent' },
-  { id: 'BCT-044', title: 'System Maintenance — Evidence Vault', category: 'System Update', sentAt: '11 Jun 2026, 10:00', target: 'Ahmedabad City', delivered: 0, openRate: 0, status: 'scheduled' },
-];
+function formatDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
 
 export default function BroadcastPage() {
   const [title, setTitle] = useState('');
@@ -20,15 +19,57 @@ export default function BroadcastPage() {
   const [scheduleTime, setScheduleTime] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [broadcasts, setBroadcasts] = useState([]);
+  const [loadingBroadcasts, setLoadingBroadcasts] = useState(true);
 
   const MSG_MAX = 300;
 
-  function handleSend() {
+  useEffect(() => {
+    fetchBroadcasts();
+  }, []);
+
+  async function fetchBroadcasts() {
+    setLoadingBroadcasts(true);
+    try {
+      const { data } = await broadcastService.getAll();
+      setBroadcasts(data);
+    } catch {
+      // silently fail - broadcasts are optional
+    } finally {
+      setLoadingBroadcasts(false);
+    }
+  }
+
+  async function handleSend() {
     setShowConfirm(false);
-    setSent(true);
-    setTimeout(() => setSent(false), 4000);
-    setTitle('');
-    setMessage('');
+    setSending(true);
+    try {
+      await broadcastService.create({
+        title: `[${category}] ${title}`,
+        message,
+        target_audience: target,
+        priority: category === 'Emergency Notice' ? 'critical' : category === 'Scam Alert' ? 'high' : 'medium',
+      });
+      setSent(true);
+      setTimeout(() => setSent(false), 4000);
+      setTitle('');
+      setMessage('');
+      fetchBroadcasts();
+    } catch (err) {
+      alert('Failed to send broadcast: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleDelete(id) {
+    try {
+      await broadcastService.delete(id);
+      setBroadcasts(prev => prev.filter(b => b.id !== id));
+    } catch (err) {
+      alert('Failed to delete: ' + (err.response?.data?.detail || err.message));
+    }
   }
 
   return (
@@ -129,10 +170,10 @@ export default function BroadcastPage() {
           <button
             className="btn btn-primary w-full"
             style={{ justifyContent: 'center', padding: '0.75rem' }}
-            disabled={!title || !message}
+            disabled={!title || !message || sending}
             onClick={() => setShowConfirm(true)}
           >
-            📡 {schedule === 'now' ? 'Send Broadcast' : 'Schedule Broadcast'}
+            {sending ? 'Sending...' : `📡 ${schedule === 'now' ? 'Send Broadcast' : 'Schedule Broadcast'}`}
           </button>
         </div>
 
@@ -172,47 +213,50 @@ export default function BroadcastPage() {
         </div>
       </div>
 
-      {/* Delivery Reports */}
+      {/* Past Broadcasts from API */}
       <div className="card p-0 mt-6">
-        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--card-border)' }}>
-          <h3 style={{ fontFamily: 'var(--font-display)' }}>📋 Recent Broadcasts & Delivery Reports</h3>
+        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ fontFamily: 'var(--font-display)' }}>📋 Broadcast History</h3>
+          <button className="btn btn-ghost btn-sm" onClick={fetchBroadcasts}>🔄 Refresh</button>
         </div>
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>ID</th><th>Title</th><th>Category</th><th>Sent</th><th>Target</th><th>Delivered</th><th>Open Rate</th><th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {PAST_BROADCASTS.map(b => (
-                <tr key={b.id}>
-                  <td><span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--info)' }}>{b.id}</span></td>
-                  <td style={{ fontSize: '0.875rem', maxWidth: 220 }} className="truncate">{b.title}</td>
-                  <td>
-                    <span className={`badge ${b.category === 'Scam Alert' ? 'badge-high' : b.category === 'Safety Advisory' ? 'badge-under-review' : 'badge-submitted'}`} style={{ fontSize: '0.7rem' }}>
-                      {b.category}
-                    </span>
-                  </td>
-                  <td style={{ fontSize: '0.75rem', color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>{b.sentAt}</td>
-                  <td style={{ fontSize: '0.8125rem', color: 'var(--muted)' }}>{b.target}</td>
-                  <td style={{ fontWeight: 600 }}>{b.delivered > 0 ? b.delivered.toLocaleString() : '—'}</td>
-                  <td>
-                    {b.openRate > 0
-                      ? <span style={{ color: 'var(--green)', fontWeight: 700 }}>{b.openRate}%</span>
-                      : <span style={{ color: 'var(--muted)' }}>—</span>
-                    }
-                  </td>
-                  <td>
-                    <span className={`badge ${b.status === 'sent' ? 'badge-closed' : 'badge-under-review'}`} style={{ fontSize: '0.7rem' }}>
-                      {b.status}
-                    </span>
-                  </td>
+        {loadingBroadcasts ? (
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)' }}>Loading broadcasts...</div>
+        ) : (
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Title</th><th>Priority</th><th>Target</th><th>Sent</th><th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {broadcasts.map(b => (
+                  <tr key={b.id}>
+                    <td>
+                      <div style={{ fontSize: '0.875rem', fontWeight: 500 }}>{b.title}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--muted)', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.message}</div>
+                    </td>
+                    <td>
+                      <span className={`badge badge-${b.priority === 'critical' ? 'critical' : b.priority === 'high' ? 'high' : 'submitted'}`} style={{ fontSize: '0.7rem' }}>
+                        {b.priority}
+                      </span>
+                    </td>
+                    <td style={{ fontSize: '0.8125rem', color: 'var(--muted)' }}>{b.target_audience}</td>
+                    <td style={{ fontSize: '0.75rem', color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>{formatDate(b.created_at)}</td>
+                    <td>
+                      <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.7rem', color: 'var(--danger)' }} onClick={() => handleDelete(b.id)}>
+                        🗑 Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {broadcasts.length === 0 && (
+                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)' }}>No broadcasts sent yet</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Confirm Modal */}
@@ -228,8 +272,8 @@ export default function BroadcastPage() {
               <div style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>{message}</div>
             </div>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={handleSend}>
-                📡 Confirm & Send
+              <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={handleSend} disabled={sending}>
+                {sending ? 'Sending...' : '📡 Confirm & Send'}
               </button>
               <button className="btn btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setShowConfirm(false)}>
                 Cancel

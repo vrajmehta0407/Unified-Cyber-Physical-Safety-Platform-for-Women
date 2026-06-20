@@ -8,15 +8,18 @@ from pydantic import BaseModel
 class IncidentResponse(BaseModel):
     id: UUID
     user_id: UUID
+    case_id: Optional[str] = None
     type: str
     status: str
-    lat: Optional[float]
-    lng: Optional[float]
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    address: Optional[str] = None
     is_silent: bool
+    assigned_officer_name: Optional[str] = None
     created_at: datetime
+    resolved_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class IncidentWithUserResponse(IncidentResponse):
